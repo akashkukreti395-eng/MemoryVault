@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>MemoryVault — Store Today. Unlock Tomorrow.</title>
+
+  <meta
+    name="description"
+    content="MemoryVault is your private digital time capsule. Write memories today and unlock them in the future."
+  >
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- MEMORYVAULT CINEMATIC INTRO -->
+ 
+
+
+<div id="cosmicIntro" class="cosmic-intro">
+  <!-- CYBERPUNK SIDE ENVIRONMENT -->
+<div class="mv-cityscape" aria-hidden="true">
+  <div class="mv-city mv-city-left">
+    <i></i><i></i><i></i><i></i><i></i><i></i>
+  </div>
+  <div class="mv-city mv-city-right">
+    <i></i><i></i><i></i><i></i><i></i><i></i>
+  </div>
+  
+  <!-- DISTANT CYBERPUNK SKYLINE -->
+  <div class="mv-distant-skyline" aria-hidden="true">
+    <i></i><i></i><i></i><i></i>
+    <i></i><i></i><i></i><i></i>
+    <i></i><i></i><i></i><i></i>
+  </div>
+
+<!-- DISTANT HOLOGRAPHIC SIGNS -->
+<div class="mv-holo-signs" aria-hidden="true">
+  <div class="mv-holo-sign mv-holo-cyan">
+    <span>MEMORY</span>
+    <span>ARCHIVE // 09</span>
+  </div>
+
+  <div class="mv-holo-sign mv-holo-red">
+    <span>NEO CITY</span>
+    <span>SECTOR // 07</span>
+  </div>
+</div>
+
+
+  <div class="mv-side-panel mv-panel-left">
+    <span class="mv-panel-label">MEMORY ARCHIVE</span>
+    <span class="mv-panel-code">ARCHIVE_001</span>
+    <span class="mv-panel-line"></span>
+    <span class="mv-panel-status"><i></i> SIGNAL CONNECTED</span>
+    <span class="mv-panel-data">TIME CAPSULE // ACTIVE</span>
+        <div class="mv-data-stream" aria-hidden="true">
+      <span>01001001</span>
+      <span>MEM_7F2A</span>
+      <span>10110100</span>
+      <span>SYNC_99</span>
+    </div>
+  </div>
+
+  <div class="mv-side-panel mv-panel-right">
+    <span class="mv-panel-label">TEMPORAL SYSTEM</span>
+    <span class="mv-panel-code">TIMELINE_2099</span>
+    <span class="mv-panel-line"></span>
+    <span class="mv-panel-status"><i></i> SYSTEM STANDBY</span>
+    <span class="mv-panel-data">MEMORY SYNC // READY</span>
+        <div class="mv-data-stream mv-data-stream-red" aria-hidden="true">
+      <span>11001010</span>
+      <span>TIME_2049</span>
+      <span>00110111</span>
+      <span>CORE_OK</span>
+    </div>
+  </div>
+
+  <div class="mv-scan-beam"></div>
+</div>
+<!-- END CYBERPUNK SIDE ENVIRONMENT -->
+  <canvas id="cosmicCanvas" aria-hidden="true"></canvas>
+
+  <div class="cosmic-vignette" aria-hidden="true"></div>
+  
+
+  <div class="cosmic-content">
+    <div class="cosmic-eyebrow">
+      <span class="cosmic-status-dot"></span>
+      A PERSONAL TIME CAPSULE
+    </div>
+
+    <div class="cosmic-capsule-scene" aria-hidden="true">
+      <div class="cosmic-orbit cosmic-orbit-one"></div>
+      <div class="cosmic-orbit cosmic-orbit-two"></div>
+      <div class="cosmic-orbit cosmic-orbit-three"></div>
+
+      <div class="cosmic-capsule">
+        <div class="capsule-glass">
+          <div class="capsule-reflection"></div>
+          <div class="capsule-core">
+            <span class="capsule-star">✦</span>
+            <span class="capsule-core-label">MV</span>
+          </div>
+          <div class="capsule-base"></div>
+        </div>
+      </div>
+
+      <div class="cosmic-energy cosmic-energy-one"></div>
+      <div class="cosmic-energy cosmic-energy-two"></div>
+    </div>
+
+    <h1 class="cosmic-title">
+      Every moment<br />
+      <span>deserves forever.</span>
+    </h1>
+
+    <p class="cosmic-description">
+      Some memories are too precious for just today.
+      Save them now. Meet them again in the future.
+    </p>
+
+    <button id="enterMemoryVault" class="cosmic-enter-btn" type="button">
+      <span>Enter MemoryVault</span>
+      <span class="cosmic-enter-arrow" aria-hidden="true">↗</span>
+    </button>
+
+    <p class="cosmic-footer">YOUR PAST. YOUR PRESENT. YOUR FUTURE.</p>
+  </div>
+
+  <div class="cosmic-corner cosmic-corner-left" aria-hidden="true">
+    MV<span> / 001</span>
+  </div>
+
+  <div class="cosmic-corner cosmic-corner-right" aria-hidden="true">
+    EST. FOR YOUR FUTURE SELF
+  </div>
+</div>
+<!-- END MEMORYVAULT CINEMATIC INTRO -->
+
+  <!-- NAVIGATION -->
+  <header class="navbar">
+
+    <a href="#" class="brand">
+      <span class="brand-icon">✦</span>
+      <span>MemoryVault</span>
+    </a>
+
+    <nav class="nav-links">
+      <a href="#how-it-works">How It Works</a>
+      <a href="#features">Features</a>
+      <button id="navLoginBtn" class="nav-login">
+        Login
+      </button>
+    </nav>
+
+  </header>
+
+
+  <!-- HERO -->
+  <main>
+
+    <section class="hero">
+
+      <div class="hero-glow"></div>
+
+      <div class="hero-content">
+
+        <div class="hero-badge">
+          <span class="status-dot"></span>
+          Your memories. Your timeline.
+        </div>
+
+       
+<h1 class="hero-title">
+  Your past.
+  <span>Your present.</span>
+  <span class="hero-title-accent">Your future.</span>
+</h1>
+
+
+        <p class="hero-description">
+          Write a message to your future self, seal it away,
+          and let MemoryVault bring it back when the moment is right.
+        </p>
+
+        <div class="hero-actions">
+
+          <button id="heroCreateBtn" class="btn btn-primary">
+            Create a Memory
+            <span>→</span>
+          </button>
+
+          <button id="heroLoginBtn" class="btn btn-secondary">
+            I already have a Vault
+          </button>
+
+        </div>
+
+        <div class="hero-note">
+          🔒 Private · ⏳ Time-locked · 📧 Email reminders
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- HOW IT WORKS -->
+    <section id="how-it-works" class="section">
+
+      <div class="section-heading">
+
+        <div class="section-label">
+          HOW IT WORKS
+        </div>
+
+        <h2>
+          A message from your past,
+          <span>waiting in your future.</span>
+        </h2>
+
+        <p>
+          Four simple steps turn an ordinary thought into
+          something you'll rediscover later.
+        </p>
+
+      </div>
+
+
+      <div class="steps-grid">
+
+        <article class="step-card">
+
+          <div class="step-number">01</div>
+
+          <div class="step-icon">✍️</div>
+
+          <h3>Write</h3>
+
+          <p>
+            Write a letter, goal, memory, promise,
+            or anything you want your future self to see.
+          </p>
+
+        </article>
+
+
+        <article class="step-card">
+
+          <div class="step-number">02</div>
+
+          <div class="step-icon">🔐</div>
+
+          <h3>Seal</h3>
+
+          <p>
+            Choose when your memory should become
+            available and lock it inside your Vault.
+          </p>
+
+        </article>
+
+
+        <article class="step-card">
+
+          <div class="step-number">03</div>
+
+          <div class="step-icon">⏳</div>
+
+          <h3>Wait</h3>
+
+          <p>
+            Life moves forward while your memory
+            waits safely for its chosen moment.
+          </p>
+
+        </article>
+
+
+        <article class="step-card">
+
+          <div class="step-number">04</div>
+
+          <div class="step-icon">💌</div>
+
+          <h3>Rediscover</h3>
+
+          <p>
+            When the time arrives, we'll notify you
+            so you can open a message from your past.
+          </p>
+
+        </article>
+
+      </div>
+
+    </section>
+
+
+    <!-- FEATURES -->
+    <section id="features" class="section features-section">
+
+      <div class="section-heading">
+
+        <div class="section-label">
+          YOUR DIGITAL TIME CAPSULE
+        </div>
+
+        <h2>
+          Built for moments
+          <span>that matter.</span>
+        </h2>
+
+      </div>
+
+
+      <div class="feature-grid">
+
+        <article class="feature-card feature-large">
+
+          <div class="feature-icon">⏰</div>
+
+          <div>
+            <h3>Time-Locked Memories</h3>
+
+            <p>
+              Pick a future date and keep your memory
+              sealed until that exact moment.
+            </p>
+          </div>
+
+        </article>
+
+
+        <article class="feature-card">
+
+          <div class="feature-icon">📧</div>
+
+          <h3>Email Notifications</h3>
+
+          <p>
+            Get notified when your memory is created
+            and when it is ready to reveal.
+          </p>
+
+        </article>
+
+
+        <article class="feature-card">
+
+          <div class="feature-icon">📎</div>
+
+          <h3>Attachments</h3>
+
+          <p>
+            Keep photos, videos, audio and other
+            meaningful files with your memories.
+          </p>
+
+        </article>
+
+
+        <article class="feature-card">
+
+          <div class="feature-icon">🔒</div>
+
+          <h3>Private Vault</h3>
+
+          <p>
+            Your memories belong to you.
+            Access is protected by your account.
+          </p>
+
+        </article>
+
+
+        <article class="feature-card">
+
+          <div class="feature-icon">📱</div>
+
+          <h3>Anywhere</h3>
+
+          <p>
+            Access your Vault from your phone,
+            laptop or desktop.
+          </p>
+
+        </article>
+
+
+        <article class="feature-card">
+
+          <div class="feature-icon">✨</div>
+
+          <h3>Made for the Future</h3>
+
+          <p>
+            Create memories for birthdays, goals,
+            milestones, relationships and more.
+          </p>
+
+        </article>
+
+      </div>
+
+    </section>
+
+
+    <!-- QUOTE -->
+    <section class="memory-preview">
+
+      <div class="memory-card">
+
+        <div class="memory-top">
+
+          <span class="memory-status">
+            🔒 SEALED
+          </span>
+
+          <span class="memory-date">
+            Opens in the future
+          </span>
+
+        </div>
+
+        <div class="memory-content">
+
+          <div class="memory-small">
+            A MESSAGE TO MY FUTURE SELF
+          </div>
+
+          <h3>
+            "Dear me, if you're reading this..."
+          </h3>
+
+          <p>
+            I hope you remember how uncertain everything
+            felt when you wrote this. I hope you kept going.
+          </p>
+
+        </div>
+
+        <div class="memory-footer">
+
+          <span>Created today</span>
+
+          <span>🔐 Locked until reveal</span>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- FINAL CTA -->
+    <section id="start" class="final-cta">
+
+      <div class="cta-glow"></div>
+
+      <div class="cta-content">
+
+        <div class="section-label">
+          YOUR FUTURE IS WAITING
+        </div>
+
+        <h2>
+          What would you tell
+          <span>your future self?</span>
+        </h2>
+
+        <p>
+          Create your first MemoryVault memory today.
+        </p>
+
+        <button id="ctaCreateBtn" class="btn btn-primary">
+          Create Your First Memory
+          <span>→</span>
+        </button>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- FOOTER -->
+  <footer class="footer">
+
+    <div class="footer-brand">
+      <span class="brand-icon">✦</span>
+      MemoryVault
+    </div>
+
+    <p>
+      Store today. Unlock tomorrow.
+    </p>
+
+    <div class="footer-copy">
+      © 2026 MemoryVault
+    </div>
+
+  </footer>
+
+
+<!-- MEMORYVAULT DASHBOARD -->
+<section  id="dashboardSection" class="dashboard-section hidden">
+  
+<canvas id="dashboardCosmicCanvas" aria-hidden="true"></canvas>
+
+
+
+
+  <div class="vault-system-bar">
+    <div class="vault-system-brand">
+      <span class="vault-brand-symbol">✧</span>
+      <span>MEMORYVAULT</span>
+      <span class="vault-version">SYSTEM 01</span>
+    </div>
+
+    <div class="vault-system-status">
+      <span class="vault-status-dot"></span>
+      VAULT INITIALIZED
+    </div>
+  </div>
+
+  <nav class="vault-nav" aria-label="Vault navigation">
+    <a href="#vaultOverview">Overview</a>
+    <a href="#vaultCreate">Create Memory</a>
+    <a href="#vaultArchive">Memory Archive</a>
+  </nav>
+
+  <div class="dashboard-header" id="vaultOverview">
+    <div>
+      <p class="dashboard-eyebrow">YOUR PERSONAL SPACE</p>
+      <h1>Welcome, <span id="dashboardUserName">Friend</span></h1>
+      <p>Your memories today, your stories tomorrow.</p>
+    </div> 
+    
+<button
+  id="openAdminDashboardBtn"
+  class="btn btn-secondary hidden"
+  type="button"
+>
+  Admin Dashboard
+</button>
+
+    <button id="logoutBtn" class="btn btn-secondary" type="button">
+      Log Out
+    </button>
+  </div>
+
+  <div class="dashboard-stats">
+    <div class="dashboard-stat">
+      <span id="totalMemories">0</span>
+      <p>Total Memories</p>
+    </div>
+    <div class="dashboard-stat">
+      <span id="lockedMemories">0</span>
+      <p>Locked Memories</p>
+    </div>
+    <div class="dashboard-stat">
+      <span id="revealedMemories">0</span>
+      <p>Revealed Memories</p>
+    </div>
+</div>
+
+<div class="dashboard-workspace">
+
+
+
+
+
+
+  <div class="memory-create-card" id="vaultCreate">
+  
+    <h2>Create a New Memory</h2>
+    <p>Write something today and choose when your future self can read it.</p>
+
+    <form id="memoryForm">
+      <label for="memoryTitle">Memory title</label>
+      <input
+        id="memoryTitle"
+        name="title"
+        type="text"
+        placeholder="e.g. A letter to my future self"
+        maxlength="120"
+        required
+      />
+      
+<label for="memoryCategory">Memory category</label>
+<select id="memoryCategory" name="category" required>
+  <option value="Personal">Personal</option>
+  <option value="Goals">Goals</option>
+  <option value="Birthdays">Birthdays</option>
+  <option value="Relationships">Relationships</option>
+  <option value="Milestones">Milestones</option>
+  <option value="Education">Education</option>
+</select>
+
+
+      <label for="memoryMessage">Your message</label>
+      <textarea
+        id="memoryMessage"
+        name="message"
+        rows="5"
+        placeholder="Write your memory here..."
+        required
+      ></textarea>
+
+      <label for="memoryRevealAt">Reveal date and time</label>
+      <input
+        id="memoryRevealAt"
+        name="revealAt"
+        type="datetime-local"
+        required
+      />
+
+      <button class="btn btn-primary" type="submit">
+        Save Memory
+      </button>
+
+      <p id="memoryFormMessage" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+
+  <div class="vault-archive-panel">
+    <div class="memories-heading" id="vaultArchive">
+      <div>
+        <h2>Your Memories</h2>
+        <p>Everything you have saved in your vault.</p>
+      </div>
+
+      <button id="refreshMemoriesBtn" class="btn btn-secondary" type="button">
+        Refresh
+      </button>
+    </div>
+
+   
+<div class="memory-tools">
+  <input
+    id="memorySearch"
+    type="search"
+    placeholder="Search your memories..."
+    aria-label="Search memories"
+  />
+
+  <select id="memoryFilter" aria-label="Filter memories">
+    <option value="all">All memories</option>
+    <option value="locked">Locked</option>
+    <option value="revealed">Revealed</option>
+  </select>
+</div>
+
+<div id="memoriesList" class="memories-list">
+  <p>Loading your memories...</p>
+</div>
+
+  </div>
+
+</div>
+
+</section>
+<!-- END MEMORYVAULT DASHBOARD -->
+ 
+<!-- Separate Admin Dashboard Screen -->
+
+<!-- CYBERPUNK ADMIN COMMAND CENTER -->
+<section id="adminDashboardSection" class="admin-dashboard-section hidden">
+
+  <!-- Fixed command sidebar -->
+  <aside class="cyber-sidebar">
+    <div class="cyber-brand">
+      <span class="cyber-brand-icon">✦</span>
+      <div>
+        <strong>MEMORYVAULT</strong>
+        <small>SYSTEM ADMIN</small>
+      </div>
+    </div>
+
+    <div class="cyber-sidebar-label">COMMAND MENU</div>
+
+    <nav class="cyber-nav">
+      <a class="cyber-nav-link active" href="#adminOverview">
+        <span>▦</span> Admin Dashboard
+      </a>
+      <a class="cyber-nav-link" href="#adminUsersList">
+        <span>♙</span> User Accounts
+      </a>
+      <a class="cyber-nav-link" href="#adminUserMemories">
+        <span>▤</span> Memory Browser
+      </a>
+    </nav>
+
+    <div class="cyber-sidebar-spacer"></div>
+
+    <div class="cyber-session-card">
+      <span class="cyber-status-dot"></span>
+      <div>
+        <small>ADMIN SESSION</small>
+        <strong>ACTIVE</strong>
+      </div>
+    </div>
+
+    <button id="backToVaultBtn" class="cyber-back-button" type="button">
+      <span>↩</span> Back to My Vault
+    </button>
+  </aside>
+
+  <!-- Main command workspace -->
+  <main class="cyber-main">
+
+    <header class="cyber-topbar">
+      <div class="cyber-breadcrumb">
+        <span>MEMORYVAULT</span>
+        <span class="cyber-separator">/</span>
+        <span>CONTROL CENTER</span>
+      </div>
+
+      <div class="cyber-connection">
+        <span class="cyber-status-dot"></span>
+        SECURE SESSION
+      </div>
+    </header>
+
+    <section id="adminOverview" class="cyber-page-heading">
+      <div>
+        <p class="cyber-eyebrow">SYSTEM ADMINISTRATION // 01</p>
+        <h1>Admin <span>Control Center</span></h1>
+        <p>Monitor accounts and inspect memory vaults across the system.</p>
+      </div>
+
+      <div class="cyber-access-badge">
+        <span>✦</span> ROOT ACCESS
+      </div>
+    </section>
+
+    <!-- Metrics and account management remain connected to existing JS -->
+    <section class="cyber-metrics">
+      <article class="cyber-metric-card cyan">
+        <div class="cyber-metric-top">
+          <span class="cyber-metric-icon">♙</span>
+          <span class="cyber-metric-label">DATABASE / 01</span>
+        </div>
+        <span id="adminTotalUsers" class="cyber-metric-number">0</span>
+        <p>REGISTERED ACCOUNTS</p>
+        <div class="cyber-metric-line"></div>
+      </article>
+
+      <article class="cyber-metric-card magenta">
+        <div class="cyber-metric-top">
+          <span class="cyber-metric-icon">▤</span>
+          <span class="cyber-metric-label">ARCHIVE / 02</span>
+        </div>
+        <span class="cyber-metric-number">MEMORY</span>
+        <p>VAULT INSPECTION</p>
+        <div class="cyber-metric-line"></div>
+      </article>
+
+      <article class="cyber-metric-card violet">
+        <div class="cyber-metric-top">
+          <span class="cyber-metric-icon">⬡</span>
+          <span class="cyber-metric-label">SECURITY / 03</span>
+        </div>
+        <span class="cyber-metric-number">ACTIVE</span>
+        <p>CONTROL SESSION</p>
+        <div class="cyber-metric-line"></div>
+      </article>
+    </section>
+
+    <!-- Existing admin panel and JavaScript IDs are preserved -->
+    <div id="adminPanelHost">
+<section id="adminPanel" class="admin-panel hidden cyber-users-panel">
+
+      <div class="cyber-section-heading">
+        <div>
+          <p class="cyber-eyebrow">USER DATABASE // 02</p>
+          <h2>Registered Accounts</h2>
+          <p>Search, inspect, and manage registered vault owners.</p>
+        </div>
+
+        <button id="refreshAdminUsersBtn" class="cyber-refresh-button" type="button">
+          <span>⟳</span> Refresh Accounts
+        </button>
+      </div>
+
+      <div class="cyber-table-label">
+        <span class="cyber-status-dot"></span>
+        ACCOUNT DIRECTORY
+      </div>
+
+      <div id="adminUsersList" class="admin-users-list cyber-account-list">
+        <p>Connecting to user database...</p>
+      </div>
+
+      <section id="adminUserMemories" class="admin-user-memories hidden cyber-memory-inspector">
+        <div class="cyber-section-heading">
+          <div>
+            <p class="cyber-eyebrow">ARCHIVE ACCESS // 03</p>
+            <h2 id="adminSelectedUserTitle">User Memories</h2>
+          </div>
+        </div>
+
+        <div id="adminUserMemoriesList"></div>
+      </section>
+
+    </section>
+</div>
+    <footer class="cyber-footer">
+      <span>MEMORYVAULT OS</span>
+      <span>ADMINISTRATIVE INTERFACE</span>
+      <span class="cyber-status-dot"></span>
+    </footer>
+
+  </main>
+</section>
+<!-- END CYBERPUNK ADMIN COMMAND CENTER -->
+
+<!-- END SEPARATE ADMIN DASHBOARD -->
+
+
+<!-- REPLAY CINEMATIC INTRO -->
+<button
+  id="replayIntroBtn"
+  class="replay-intro-btn"
+  type="button"
+  aria-label="Replay the MemoryVault cinematic intro"
+>
+  <span aria-hidden="true">✦</span>
+  Replay Intro
+</button>
+<!-- END REPLAY CINEMATIC INTRO -->
+
+<!-- LOGIN / REGISTER MODAL -->
+<div id="landingModal" class="landing-modal hidden">
+  <div class="landing-modal-box">
+
+    <button
+      id="closeLandingModal"
+      class="modal-close"
+      type="button"
+      aria-label="Close"
+    >×</button>
+
+    <div class="modal-icon">✦</div>
+
+    <h2 id="authTitle">Welcome to MemoryVault</h2>
+    <p id="authDescription">
+      Sign in or create an account to start your personal vault.
+    </p>
+
+    <!-- LOGIN FORM -->
+    <form id="loginForm" class="auth-form">
+      <label for="loginEmail">Email address</label>
+      <input
+        id="loginEmail"
+        name="email"
+        type="email"
+        placeholder="you@example.com"
+        autocomplete="email"
+        required
+      />
+
+      <label for="loginPassword">Password</label>
+      <input
+        id="loginPassword"
+        name="password"
+        type="password"
+        placeholder="Enter your password"
+        autocomplete="current-password"
+        required
+      />
+
+      <button type="submit" class="btn btn-primary auth-submit">
+        Login
+      </button>
+
+      <p class="auth-switch">
+        New here?
+        <button type="button" id="showRegisterBtn">
+          Create an account
+        </button>
+      </p>
+    </form>
+
+    <!-- REGISTER FORM -->
+    <form id="registerForm" class="auth-form hidden">
+      <label for="registerName">Full name</label>
+      <input
+        id="registerName"
+        name="name"
+        type="text"
+        placeholder="Your name"
+        autocomplete="name"
+        maxlength="80"
+        required
+      />
+
+      <label for="registerEmail">Email address</label>
+      <input
+        id="registerEmail"
+        name="email"
+        type="email"
+        placeholder="you@example.com"
+        autocomplete="email"
+        required
+      />
+
+      <label for="registerPassword">Password</label>
+      <input
+        id="registerPassword"
+        name="password"
+        type="password"
+        placeholder="At least 6 characters"
+        autocomplete="new-password"
+        minlength="6"
+        required
+      />
+
+      <button type="submit" class="btn btn-primary auth-submit">
+        Create Account
+      </button>
+
+      <p class="auth-switch">
+        Already have an account?
+        <button type="button" id="showLoginBtn">
+          Login
+        </button>
+      </p>
+    </form>
+
+    <!-- STATUS / ERROR MESSAGE -->
+    <p
+      id="authMessage"
+      class="auth-message"
+      role="status"
+      aria-live="polite"
+    ></p>
+
+  </div>
+</div>
+ 
+
+
+  <script src="app.js"></script>
+
+</body>
+</html>

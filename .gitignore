@@ -1,0 +1,24 @@
+
+# Dependencies
+node_modules/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# SQLite database and database backups
+memoryvault.db
+memoryvault.db-*
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+
+# User uploads and private files
+uploads/
+private/
+
+# Logs
+logs/
+npm-debug.log*
