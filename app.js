@@ -126,22 +126,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
  
+
 function showDashboard(user) {
   dashboard.classList.remove("hidden");
   userName.textContent = user.name || "Friend";
 
-  const isAdmin = user.role === "admin";
+  const isAdmin = user?.role === "admin";
   const adminButton = document.getElementById("openAdminDashboardBtn");
   const adminPanel = document.getElementById("adminPanel");
 
-  // Keep the admin panel out of the normal dashboard.
-  if (adminPanel) {
-    adminPanel.classList.add("hidden");
-  }
-
-  // Show the admin button only to admins.
+  // Show the Admin Dashboard button only to admins.
   if (adminButton) {
     adminButton.classList.toggle("hidden", !isAdmin);
+    adminButton.style.display = isAdmin ? "" : "none";
+  }
+
+  // Keep the admin panel hidden on the normal dashboard.
+  if (adminPanel) {
+    adminPanel.classList.add("hidden");
   }
 
   // Hide landing-page sections while the dashboard is open.
@@ -421,7 +423,8 @@ async function deleteAdminUser(userId, userName) {
     });
   }
 
-  async function handleAuth(form, endpoint, buttonLabel) {
+
+async function handleAuth(form, endpoint, buttonLabel) {
     const button = form.querySelector('button[type="submit"]');
     const originalLabel = buttonLabel;
 
@@ -430,22 +433,34 @@ async function deleteAdminUser(userId, userName) {
     showAuthMessage("");
 
     try {
-      const data = Object.fromEntries(new FormData(form).entries());
-      await requestJSON(endpoint, {
-        method: "POST",
-        body: JSON.stringify(data)
-      });
+        const data = Object.fromEntries(new FormData(form).entries());
 
-      const result = await requestJSON("/api/me");
-      form.reset();
-      showDashboard(result.user);
+        const response = await requestJSON(endpoint, {
+            method: "POST",
+            body: JSON.stringify(data)
+        });
+
+        form.reset();
+
+        if (endpoint === "/api/register") {
+            showAuthMessage(
+                response.message || "Account created successfully! Please verify your email, then log in to continue.",
+                "success"
+            );
+            return;
+        }
+
+        const result = await requestJSON("/api/me");
+        showDashboard(result.user);
+
     } catch (error) {
-      showAuthMessage(error.message, "error");
+        showAuthMessage(error.message, "error");
     } finally {
-      button.disabled = false;
-      button.textContent = originalLabel;
+        button.disabled = false;
+        button.textContent = originalLabel;
     }
-  }
+}
+
 
   loginForm.addEventListener("submit", (event) => {
     event.preventDefault();
