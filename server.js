@@ -375,8 +375,13 @@ app.post("/api/register", async (req, res) => {
             `
         });
 
-        if (emailResult.error || !emailResult.data?.id) {
-            console.error("Verification email was not confirmed.");
+       console.log(
+    "[Registration email result]",
+    JSON.stringify(emailResult)
+);
+
+if (emailResult.error || !emailResult.data?.id) {
+    console.error("Verification email was not confirmed.");
 
             await pgPool.query(
                 `DELETE FROM users
