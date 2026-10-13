@@ -4,12 +4,28 @@ const bcrypt = require("bcryptjs");
 const Database = require("better-sqlite3");
 const path = require("path");
 const dotenv = require("dotenv");
+const { Resend } = require("resend"); 
+const crypto = require("crypto");
 
 dotenv.config();
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const EMAIL_FROM =
+    process.env.EMAIL_FROM || "MemoryVault <onboarding@resend.dev>";
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
 
 const app = express();
 
 const PORT = process.env.PORT || 3001;
+const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 
 // ============================================
 // DATABASE
@@ -18,6 +34,9 @@ const PORT = process.env.PORT || 3001;
 const db = new Database("memoryvault.db");
 
 db.pragma("foreign_keys = ON");
+
+
+
 
 
 // ============================================
@@ -47,6 +66,38 @@ db.exec(`
             ON DELETE CASCADE
     );
 `);
+
+/* Add email verification support to existing users */
+const verificationColumns = db
+    .prepare("PRAGMA table_info(users)")
+    .all();
+
+if (!verificationColumns.some((column) => column.name === "email_verified")) {
+    db.exec(`
+        ALTER TABLE users
+        ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0
+    `);
+}
+
+if (!verificationColumns.some((column) => column.name === "verification_token")) {
+    db.exec(`
+        ALTER TABLE users
+        ADD COLUMN verification_token TEXT
+    `);
+}
+
+/* Track memory reveal email notifications */
+const revealTrackingColumns = db
+    .prepare("PRAGMA table_info(memories)")
+    .all();
+
+if (!revealTrackingColumns.some((column) => column.name === "reveal_email_sent")) {
+    db.exec(`
+        ALTER TABLE memories
+        ADD COLUMN reveal_email_sent INTEGER NOT NULL DEFAULT 0
+    `);
+}
+
 
 /* Add admin role support to existing users */
 const userColumns = db
@@ -95,10 +146,13 @@ app.use(
 
         saveUninitialized: false,
 
-        cookie: {
-            httpOnly: true,
-            sameSite: "lax"
-        }
+cookie: {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 7 * 24 * 60 * 60 * 1000
+}
+
     })
 );
 
@@ -261,105 +315,231 @@ app.delete(
 // REGISTER
 // ============================================
 
+
 app.post("/api/register", async (req, res) => {
-
     try {
-
-        const {
-            name,
-            email,
-            password
-        } = req.body;
-
+        const { name, email, password } = req.body;
 
         if (!name || !email || !password) {
-
             return res.status(400).json({
                 error: "All fields are required."
             });
-
         }
 
-
-        if (password.length < 6) {
-
+        if (String(password).length < 6) {
             return res.status(400).json({
-                error:
-                    "Password must be at least 6 characters."
+                error: "Password must be at least 6 characters."
             });
-
         }
 
+        const normalizedEmail = String(email).trim().toLowerCase();
+        const normalizedName = String(name).trim();
 
-        const normalizedEmail =
-            String(email)
-                .trim()
-                .toLowerCase();
+        if (!normalizedName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+            return res.status(400).json({
+                error: "Enter a valid name and email address."
+            });
+        }
 
-
-        const existingUser =
-            db.prepare(`
-                SELECT id
-                FROM users
-                WHERE email = ?
-            `).get(normalizedEmail);
-
+        const existingUser = db.prepare(`
+            SELECT id, email_verified
+            FROM users
+            WHERE email = ?
+        `).get(normalizedEmail);
 
         if (existingUser) {
-
             return res.status(409).json({
-                error:
-                    "An account with this email already exists."
+                error: "An account with this email already exists. Please log in or contact support."
             });
-
         }
 
+        const passwordHash = await bcrypt.hash(password, 12);
 
-        const passwordHash =
-            await bcrypt.hash(password, 12);
+        const verificationToken = crypto.randomBytes(32).toString("hex");
 
+        db.prepare(`
+            INSERT INTO users (
+                name,
+                email,
+                password_hash,
+                email_verified,
+                verification_token
+            )
+            VALUES (?, ?, ?, 0, ?)
+        `).run(
+            normalizedName,
+            normalizedEmail,
+            passwordHash,
+            verificationToken
+        );
 
-        const result =
+        const verificationLink =
+            `${APP_URL}/api/verify-email?token=${verificationToken}`;
+
+        const emailResult = await resend.emails.send({
+            from: EMAIL_FROM,
+            to: [normalizedEmail],
+            subject: "Verify your MemoryVault email",
+            html: `
+                <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;line-height:1.6">
+                    <h2>Welcome to MemoryVault!</h2>
+                    <p>Click the button below to verify your email address and activate your account.</p>
+                    <p>
+                        <a href="${verificationLink}"
+                           style="display:inline-block;padding:12px 20px;background:#222;color:#fff;text-decoration:none;border-radius:6px">
+                           Verify my email
+                        </a>
+                    </p>
+                    <p>If the button doesn't work, open this link:</p>
+                    <p><a href="${verificationLink}">${verificationLink}</a></p>
+                    <p>If you didn't create a MemoryVault account, you can ignore this email.</p>
+                </div>
+            `
+        });
+
+        if (emailResult.error) {
+            console.error("Verification email failed:", emailResult.error);
+
             db.prepare(`
-                INSERT INTO users
-                (
-                    name,
-                    email,
-                    password_hash
-                )
-                VALUES (?, ?, ?)
-            `).run(
-                String(name).trim(),
-                normalizedEmail,
-                passwordHash
-            );
+                DELETE FROM users
+                WHERE email = ? AND email_verified = 0
+            `).run(normalizedEmail);
 
-
-        req.session.userId =
-            result.lastInsertRowid;
-
+            return res.status(502).json({
+                error: "We couldn't send the verification email. Please try registering again."
+            });
+        }
 
         res.status(201).json({
             success: true,
-            message:
-                "Account created successfully."
+            message: "Account created. Please check your email and click the verification link before logging in."
         });
-
     } catch (error) {
-
-        console.error(
-            "Registration error:",
-            error
-        );
+        console.error("Registration error:", error);
 
         res.status(500).json({
-            error:
-                "Could not create account."
+            error: "Could not create account. Please try again."
+        });
+    }
+});
+
+
+/* Verify a user's email address */
+app.get("/api/verify-email", (req, res) => {
+    try {
+        const token = String(req.query.token || "").trim();
+
+        if (!token) {
+            return res.status(400).send("Verification link is invalid.");
+        }
+
+        const user = db.prepare(`
+            SELECT id
+            FROM users
+            WHERE verification_token = ?
+        `).get(token);
+
+        if (!user) {
+            return res.status(400).send(
+                "This verification link is invalid or has already been used."
+            );
+        }
+
+        db.prepare(`
+            UPDATE users
+            SET email_verified = 1,
+                verification_token = NULL
+            WHERE id = ?
+        `).run(user.id);
+
+        res.send(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>Email Verified | MemoryVault</title>
+            </head>
+            <body style="font-family:Arial,sans-serif;text-align:center;padding:60px 20px">
+                <h1>Email verified successfully!</h1>
+                <p>Your MemoryVault account is ready. You can now log in.</p>
+                <a href="${APP_URL}">Return to MemoryVault</a>
+            </body>
+            </html>
+        `);
+    } catch (error) {
+        console.error("Email verification error:", error);
+        res.status(500).send("Could not verify your email. Please try again.");
+    }
+});
+
+/* Temporary endpoint to resend a verification email */
+app.post("/api/resend-verification", async (req, res) => {
+    try {
+        const email = String(req.body?.email || "")
+            .trim()
+            .toLowerCase();
+
+        const user = db.prepare(`
+            SELECT id, email_verified
+            FROM users
+            WHERE email = ?
+        `).get(email);
+
+        if (!user) {
+            return res.status(404).json({
+                error: "Account not found."
+            });
+        }
+
+        if (user.email_verified) {
+            return res.json({
+                success: true,
+                message: "Your email is already verified."
+            });
+        }
+
+        const token = crypto.randomBytes(32).toString("hex");
+
+        db.prepare(`
+            UPDATE users
+            SET verification_token = ?
+            WHERE id = ?
+        `).run(token, user.id);
+
+        const verificationLink =
+            `${APP_URL}/api/verify-email?token=${token}`;
+
+        const result = await resend.emails.send({
+            from: EMAIL_FROM,
+            to: [email],
+            subject: "Verify your MemoryVault email",
+            html: `
+                <h2>Verify your MemoryVault account</h2>
+                <p>Click the link below to verify your email:</p>
+                <p><a href="${verificationLink}">Verify my email</a></p>
+            `
         });
 
-    }
+        if (result.error) {
+            console.error("Resend verification failed:", result.error);
+            return res.status(502).json({
+                error: "Email provider rejected the message."
+            });
+        }
 
+        res.json({
+            success: true,
+            message: "Verification email accepted by Resend."
+        });
+    } catch (error) {
+        console.error("Resend verification error:", error);
+        res.status(500).json({
+            error: "Could not resend verification email."
+        });
+    }
 });
+
 
 
 
@@ -426,6 +606,12 @@ app.post("/api/login", async (req, res) => {
             });
 
         }
+
+if (!user.email_verified) {
+    return res.status(403).json({
+        error: "Please verify your email before logging in. Check your inbox."
+    });
+}
 
 
         req.session.userId = user.id;
@@ -523,111 +709,123 @@ WHERE id = ?
 // CREATE MEMORY
 // ============================================
 
+
 app.post(
     "/api/memories",
     requireLogin,
-    (req, res) => {
-
+    async (req, res) => {
         try {
+            const {
+                title,
+                message,
+                revealAt,
+                category = "Personal"
+            } = req.body;
 
-        
-const {
-    title,
-    message,
-    revealAt,
-    category = "Personal"
-} = req.body;
-
-
-
-            if (
-                !title ||
-                !message ||
-                !revealAt
-            ) {
-
+            if (!title || !message || !revealAt) {
                 return res.status(400).json({
-                    error:
-                        "Title, message and reveal date are required."
+                    error: "Title, message and reveal date are required."
                 });
-
             }
 
+            const revealDate = new Date(revealAt);
 
-            const revealDate =
-                new Date(revealAt);
+            if (Number.isNaN(revealDate.getTime())) {
+                return res.status(400).json({
+                    error: "Invalid reveal date."
+                });
+            }
 
+            if (revealDate <= new Date()) {
+                return res.status(400).json({
+                    error: "Reveal date must be in the future."
+                });
+            }
 
-            if (
-                Number.isNaN(
-                    revealDate.getTime()
+            const cleanTitle = String(title).trim();
+            const cleanMessage = String(message).trim();
+            const cleanCategory = String(category).trim() || "Personal";
+
+            if (!cleanTitle || !cleanMessage) {
+                return res.status(400).json({
+                    error: "Title and message cannot be empty."
+                });
+            }
+
+            const result = db.prepare(`
+                INSERT INTO memories (
+                    user_id,
+                    title,
+                    message,
+                    reveal_at,
+                    category
                 )
-            ) {
+                VALUES (?, ?, ?, ?, ?)
+            `).run(
+                req.session.userId,
+                cleanTitle,
+                cleanMessage,
+                revealDate.toISOString(),
+                cleanCategory
+            );
 
-                return res.status(400).json({
-                    error:
-                        "Invalid reveal date."
-                });
+            const user = db.prepare(`
+                SELECT name, email
+                FROM users
+                WHERE id = ?
+            `).get(req.session.userId);
 
+            if (user) {
+                try {
+                    const emailResult = await resend.emails.send({
+                        from: EMAIL_FROM,
+                        to: [user.email],
+                        subject: "Your MemoryVault memory has been created",
+                        html: `
+                            <div style="font-family:Arial,sans-serif;line-height:1.6;max-width:560px;margin:auto">
+                                <h2>Memory saved successfully!</h2>
+                                <p>Hello ${escapeHtml(user.name)},</p>
+                                <p>Your memory <strong>${escapeHtml(cleanTitle)}</strong> has been saved in MemoryVault.</p>
+                                <p>Scheduled reveal date:</p>
+                                <p><strong>${escapeHtml(
+                                    revealDate.toLocaleString("en-IN", {
+                                        dateStyle: "medium",
+                                        timeStyle: "short",
+                                        timeZone: "Asia/Kolkata"
+                                    })
+                                )} (IST)</strong></p>
+                                <p>Thank you for using MemoryVault.</p>
+                            </div>
+                        `
+                    });
+
+                    if (emailResult.error) {
+                        console.error(
+                            "Memory confirmation email failed:",
+                            emailResult.error
+                        );
+                    }
+                } catch (emailError) {
+                    console.error(
+                        "Memory confirmation email error:",
+                        emailError
+                    );
+                }
             }
-
-
-            if (
-                revealDate <= new Date()
-            ) {
-
-                return res.status(400).json({
-                    error:
-                        "Reveal date must be in the future."
-                });
-
-            }
-
-
-            const result =
-                db.prepare(`
-                    
-INSERT INTO memories
-(
-    user_id,
-    title,
-    message,
-    reveal_at,
-    category
-)
-VALUES (?, ?, ?, ?, ?)
-
-                `).run(
-                  
-req.session.userId,
-String(title).trim(),
-String(message).trim(),
-revealDate.toISOString(),
-String(category).trim() || "Personal"
-
-                );
-
 
             res.status(201).json({
                 success: true,
-                memoryId:
-                    result.lastInsertRowid
+                memoryId: result.lastInsertRowid,
+                message: "Memory created successfully."
             });
 
         } catch (error) {
-
-            console.error(
-                "Memory creation error:",
-                error
-            );
+            console.error("Memory creation error:", error);
 
             res.status(500).json({
-                error:
-                    "Could not create memory."
+                error: "Could not create memory."
             });
-
         }
-
     }
 );
 
@@ -636,13 +834,82 @@ String(category).trim() || "Personal"
 // GET USER MEMORIES
 // ============================================
 
+
 app.get(
     "/api/memories",
     requireLogin,
-    (req, res) => {
+    async (req, res) => {
+        try {
+            const now = new Date();
 
-        const memories =
-            db.prepare(`
+            // Find memories that are due to be revealed.
+            const dueMemories = db.prepare(`
+                SELECT
+                    id,
+                    title,
+                    reveal_at,
+                    reveal_email_sent
+                FROM memories
+                WHERE user_id = ?
+                  AND reveal_at <= ?
+                  AND reveal_email_sent = 0
+            `).all(
+                req.session.userId,
+                now.toISOString()
+            );
+
+            const user = db.prepare(`
+                SELECT name, email
+                FROM users
+                WHERE id = ?
+            `).get(req.session.userId);
+
+            if (user) {
+                for (const memory of dueMemories) {
+                    try {
+                        const emailResult = await resend.emails.send({
+                            from: EMAIL_FROM,
+                            to: [user.email],
+                            subject: "A MemoryVault memory is ready to reveal",
+                            html: `
+                                <div style="font-family:Arial,sans-serif;line-height:1.6;max-width:560px;margin:auto">
+                                    <h2>Your memory is ready!</h2>
+                                    <p>Hello ${escapeHtml(user.name)},</p>
+                                    <p>Your scheduled memory <strong>${escapeHtml(memory.title)}</strong> is now ready to reveal.</p>
+                                    <p>Log in to MemoryVault to open your memory.</p>
+                                    <p><a href="${APP_URL}">Open MemoryVault</a></p>
+                                </div>
+                            `
+                        });
+
+                        if (emailResult.error) {
+                            console.error(
+                                "Reveal notification failed:",
+                                emailResult.error
+                            );
+                            continue;
+                        }
+
+                        // Mark as sent only after Resend accepts the email.
+                        db.prepare(`
+                            UPDATE memories
+                            SET reveal_email_sent = 1
+                            WHERE id = ?
+                              AND user_id = ?
+                              AND reveal_email_sent = 0
+                        `).run(memory.id, req.session.userId);
+
+                    } catch (emailError) {
+                        console.error(
+                            "Reveal notification error:",
+                            emailError
+                        );
+                    }
+                }
+            }
+
+            // Return the user's memories.
+            const memories = db.prepare(`
                 SELECT
                     id,
                     title,
@@ -654,44 +921,28 @@ app.get(
                 FROM memories
                 WHERE user_id = ?
                 ORDER BY reveal_at ASC
-            `).all(
-                req.session.userId
-            );
+            `).all(req.session.userId);
 
-
-        const now = new Date();
-
-
-        const result =
-            memories.map(memory => {
-
+            const result = memories.map(memory => {
                 const isRevealed =
-                    new Date(
-                        memory.reveal_at
-                    ) <= now;
+                    new Date(memory.reveal_at) <= now;
 
                 return {
                     ...memory,
-
-                    revealed:
-                        Boolean(
-                            memory.revealed ||
-                            isRevealed
-                        ),
-
-                    message:
-                        isRevealed
-                            ? memory.message
-                            : null
+                    revealed: Boolean(memory.revealed || isRevealed),
+                    message: isRevealed ? memory.message : null
                 };
-
             });
 
+            res.json({ memories: result });
 
-        res.json({
-            memories: result
-        });
+        } catch (error) {
+            console.error("Memory retrieval error:", error);
 
+            res.status(500).json({
+                error: "Could not load memories."
+            });
+        }
     }
 );
 
@@ -738,16 +989,62 @@ app.delete(
 // HOME PAGE
 // ============================================
 
-app.use((req, res) => {
-    res.sendFile(
-        path.join(__dirname, "index.html")
-    );
-});
+
 
 
 // ============================================
 // START SERVER
 // ============================================
+
+app.post("/api/test-email", async (req, res) => {
+    try {
+        if (process.env.NODE_ENV === "production") {
+            return res.status(403).json({
+                error: "Test endpoint is disabled in production."
+            });
+        }
+
+        const recipient = String(req.body?.email || "")
+            .trim()
+            .toLowerCase();
+
+        if (!recipient || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+            return res.status(400).json({
+                error: "Enter a valid recipient email."
+            });
+        }
+
+        const result = await resend.emails.send({
+            from: EMAIL_FROM,
+            to: [recipient],
+            subject: "MemoryVault email test",
+            html: "<h2>MemoryVault email test</h2><p>If you received this email, your Resend connection is working.</p>"
+        });
+
+        if (result.error) {
+            console.error("Resend test failed:", result.error);
+            return res.status(502).json({
+                error: "Email provider rejected the test email."
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Email accepted by Resend.",
+            id: result.data?.id
+        });
+    } catch (error) {
+        console.error("Test email error:", error);
+        res.status(500).json({
+            error: "Could not send test email."
+        });
+    }
+});
+app.use((req, res) => {
+    res.sendFile(
+        path.join(__dirname, "index.html")
+    );
+});
 
 app.listen(
     PORT,
