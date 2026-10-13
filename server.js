@@ -1,7 +1,7 @@
 const express = require("express");
 const session = require("express-session");
 const bcrypt = require("bcryptjs");
-const Database = require("better-sqlite3");
+const { Pool } = require("pg");
 const path = require("path");
 const dotenv = require("dotenv");
 const crypto = require("node:crypto");
@@ -29,128 +29,51 @@ app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3001;
 const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 
-// ============================================
-// DATABASE
-// ============================================
 
-const db = new Database(
-    path.join(__dirname, "memoryvault.db")
-);
-console.log(
-    `[database setup] directory=${__dirname} databasePath=${path.join(__dirname, "memoryvault.db")} adminEmailConfigured=${Boolean(process.env.ADMIN_EMAIL)}`
-);
+ // ============================================
+ // DATABASE
+ // ============================================
 
-db.pragma("foreign_keys = ON");
+const pgPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+});
 
+pgPool.query("SELECT 1")
+    .then(() => {
+        console.log("[PostgreSQL] Connection successful");
+    })
+    .catch((error) => {
+        console.error("[PostgreSQL] Connection failed:", error.message);
+    });
 
-
-
-
-// ============================================
-// DATABASE TABLES
-// ============================================
-
-db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS memories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        message TEXT NOT NULL,
-        reveal_at TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        revealed INTEGER NOT NULL DEFAULT 0,
-
-        FOREIGN KEY (user_id)
-            REFERENCES users(id)
-            ON DELETE CASCADE
-    );
-`);
-
-/* Add email verification support to existing users */
-const verificationColumns = db
-    .prepare("PRAGMA table_info(users)")
-    .all();
-
-if (!verificationColumns.some((column) => column.name === "email_verified")) {
-    db.exec(`
-        ALTER TABLE users
-        ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0
-    `);
-}
-
-if (!verificationColumns.some((column) => column.name === "verification_token")) {
-    db.exec(`
-        ALTER TABLE users
-        ADD COLUMN verification_token TEXT
-    `);
-}
-
-/* Track memory reveal email notifications */
-const revealTrackingColumns = db
-    .prepare("PRAGMA table_info(memories)")
-    .all();
-
-if (!revealTrackingColumns.some((column) => column.name === "reveal_email_sent")) {
-    db.exec(`
-        ALTER TABLE memories
-        ADD COLUMN reveal_email_sent INTEGER NOT NULL DEFAULT 0
-    `);
-}
-
-
-/* Add admin role support to existing users */
-const userColumns = db
-    .prepare("PRAGMA table_info(users)")
-    .all();
-
-if (!userColumns.some((column) => column.name === "role")) {
-    db.exec(`
-        ALTER TABLE users
-        ADD COLUMN role TEXT NOT NULL DEFAULT 'user'
-    `);
-}
 const adminEmail = String(process.env.ADMIN_EMAIL || "")
     .trim()
     .toLowerCase();
 
 if (adminEmail) {
-    const result = db.prepare(
-        "UPDATE users SET role = 'admin' WHERE lower(email) = ?"
-    ).run(adminEmail);
+    pgPool.query(
+        "UPDATE users SET role = 'admin' WHERE lower(email) = $1",
+        [adminEmail]
+    )
+    .then(async (result) => {
+        const adminUser = await pgPool.query(
+            "SELECT role FROM users WHERE lower(email) = $1",
+            [adminEmail]
+        );
 
-    const adminUser = db.prepare(
-        "SELECT role FROM users WHERE lower(email) = ?"
-    ).get(adminEmail);
-
-    console.log("[admin setup]", {
-        accountFound: Boolean(adminUser),
-        role: adminUser?.role ?? "not found",
-        rowsUpdated: result.changes
+        console.log("[admin setup]", {
+            accountFound: adminUser.rows.length > 0,
+            role: adminUser.rows[0]?.role ?? "not found",
+            rowsUpdated: result.rowCount
+        });
+    })
+    .catch((error) => {
+        console.error("[admin setup] PostgreSQL error:", error.message);
     });
 } else {
     console.log("[admin setup] ADMIN_EMAIL is not configured");
 }
-// Add the category column to existing databases safely.
-const memoryColumns = db
-  .prepare("PRAGMA table_info(memories)")
-  .all();
-
-if (!memoryColumns.some((column) => column.name === "category")) {
-  db.exec(`
-    ALTER TABLE memories
-    ADD COLUMN category TEXT NOT NULL DEFAULT 'Personal'
-  `);
-}
-
-
 
 // ============================================
 // MIDDLEWARE
@@ -211,47 +134,64 @@ function requireLogin(req, res, next) {
     next();
 }
 
-function requireAdmin(req, res, next) {
+
+async function requireAdmin(req, res, next) {
     if (!req.session.userId) {
         return res.status(401).json({
             error: "Please log in first."
         });
     }
 
-    const user = db.prepare(
-        "SELECT role FROM users WHERE id = ?"
-    ).get(req.session.userId);
+    try {
+        const result = await pgPool.query(
+            "SELECT role FROM users WHERE id = $1",
+            [req.session.userId]
+        );
 
-    if (!user || user.role !== "admin") {
-        return res.status(403).json({
-            error: "Admin access required."
+        const user = result.rows[0];
+
+        if (!user || user.role !== "admin") {
+            return res.status(403).json({
+                error: "Admin access required."
+            });
+        }
+
+        next();
+    } catch (error) {
+        console.error("Admin authentication error:", error);
+
+        res.status(500).json({
+            error: "Could not verify admin access."
         });
     }
-
-    next();
 }
 
-app.get("/api/admin/users", requireAdmin, (req, res) => {
+
+
+app.get("/api/admin/users", requireAdmin, async (req, res) => {
     try {
-        const users = db.prepare(`
+        const result = await pgPool.query(`
             SELECT id, name, email, role, created_at
             FROM users
             ORDER BY created_at DESC
-        `).all();
+        `);
 
-        res.json({ users });
+        res.json({ users: result.rows });
     } catch (error) {
         console.error("Admin users error:", error);
+
         res.status(500).json({
             error: "Could not load user accounts."
         });
     }
 });
 
+
+
 app.get(
     "/api/admin/users/:id/memories",
     requireAdmin,
-    (req, res) => {
+    async (req, res) => {
         try {
             const userId = Number(req.params.id);
 
@@ -261,11 +201,14 @@ app.get(
                 });
             }
 
-            const user = db.prepare(`
-                SELECT id, name, email
-                FROM users
-                WHERE id = ?
-            `).get(userId);
+            const userResult = await pgPool.query(
+                `SELECT id, name, email
+                 FROM users
+                 WHERE id = $1`,
+                [userId]
+            );
+
+            const user = userResult.rows[0];
 
             if (!user) {
                 return res.status(404).json({
@@ -273,20 +216,22 @@ app.get(
                 });
             }
 
-            const memories = db.prepare(`
-                SELECT id, title, message, category,
-                       reveal_at, created_at, revealed
-                FROM memories
-                WHERE user_id = ?
-                ORDER BY created_at DESC
-            `).all(userId);
+            const memoriesResult = await pgPool.query(
+                `SELECT id, title, message, category,
+                        reveal_at, created_at, revealed
+                 FROM memories
+                 WHERE user_id = $1
+                 ORDER BY created_at DESC`,
+                [userId]
+            );
 
             res.json({
                 user,
-                memories
+                memories: memoriesResult.rows
             });
         } catch (error) {
             console.error("Admin memories error:", error);
+
             res.status(500).json({
                 error: "Could not load user memories."
             });
@@ -294,10 +239,12 @@ app.get(
     }
 );
 
+
+
 app.delete(
     "/api/admin/users/:id",
     requireAdmin,
-    (req, res) => {
+    async (req, res) => {
         try {
             const userId = Number(req.params.id);
 
@@ -307,17 +254,18 @@ app.delete(
                 });
             }
 
-            if (userId === req.session.userId) {
+            if (userId === Number(req.session.userId)) {
                 return res.status(400).json({
                     error: "You cannot delete your own admin account."
                 });
             }
 
-            const result = db.prepare(
-                "DELETE FROM users WHERE id = ?"
-            ).run(userId);
+            const result = await pgPool.query(
+                "DELETE FROM users WHERE id = $1",
+                [userId]
+            );
 
-            if (result.changes === 0) {
+            if (result.rowCount === 0) {
                 return res.status(404).json({
                     error: "User not found."
                 });
@@ -329,6 +277,7 @@ app.delete(
             });
         } catch (error) {
             console.error("Admin deletion error:", error);
+
             res.status(500).json({
                 error: "Could not delete the account."
             });
@@ -337,9 +286,11 @@ app.delete(
 );
 
 
+
 // ============================================
 // REGISTER
 // ============================================
+
 
 
 app.post("/api/register", async (req, res) => {
@@ -361,77 +312,77 @@ app.post("/api/register", async (req, res) => {
         const normalizedEmail = String(email).trim().toLowerCase();
         const normalizedName = String(name).trim();
 
-        if (!normalizedName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        if (
+            !normalizedName ||
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)
+        ) {
             return res.status(400).json({
                 error: "Enter a valid name and email address."
             });
         }
 
-        const existingUser = db.prepare(`
-            SELECT id, email_verified
-            FROM users
-            WHERE email = ?
-        `).get(normalizedEmail);
+        const existingResult = await pgPool.query(
+            `SELECT id, email_verified
+             FROM users
+             WHERE email = $1`,
+            [normalizedEmail]
+        );
 
-        if (existingUser) {
+        if (existingResult.rows.length > 0) {
             return res.status(409).json({
                 error: "An account with this email already exists. Please log in or contact support."
             });
         }
 
         const passwordHash = await bcrypt.hash(password, 12);
-
         const verificationToken = crypto.randomBytes(32).toString("hex");
 
-        db.prepare(`
-            INSERT INTO users (
-                name,
-                email,
-                password_hash,
-                email_verified,
-                verification_token
+        await pgPool.query(
+            `INSERT INTO users (
+                name, email, password_hash,
+                email_verified, verification_token
             )
-            VALUES (?, ?, ?, 0, ?)
-        `).run(
-            normalizedName,
-            normalizedEmail,
-            passwordHash,
-            verificationToken
+            VALUES ($1, $2, $3, 0, $4)`,
+            [
+                normalizedName,
+                normalizedEmail,
+                passwordHash,
+                verificationToken
+            ]
         );
 
         const verificationLink =
             `${APP_URL}/api/verify-email?token=${verificationToken}`;
 
-
-const emailResult = await resend.emails.send({
-    from: EMAIL_FROM,
-    to: [normalizedEmail],
-    subject: "Verify your MemoryVault email",
-    html: `
-        <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;line-height:1.6">
-            <h2>Welcome to MemoryVault!</h2>
-            <p>Click the button below to verify your email address and activate your account.</p>
-            <p>
-                <a href="${verificationLink}"
-                   style="display:inline-block;padding:12px 20px;background:#222;color:#fff;text-decoration:none;border-radius:6px">
-                   Verify my email
-                </a>
-            </p>
-            <p>If the button doesn't work, open this link:</p>
-            <p><a href="${verificationLink}">${verificationLink}</a></p>
-            <p>If you didn't create a MemoryVault account, you can ignore this email.</p>
-        </div>
-    `
-});
-
+        const emailResult = await resend.emails.send({
+            from: EMAIL_FROM,
+            to: [normalizedEmail],
+            subject: "Verify your MemoryVault email",
+            html: `
+                <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;line-height:1.6">
+                    <h2>Welcome to MemoryVault!</h2>
+                    <p>Click the button below to verify your email address and activate your account.</p>
+                    <p>
+                        <a href="${verificationLink}"
+                           style="display:inline-block;padding:12px 20px;background:#222;color:#fff;text-decoration:none;border-radius:6px">
+                           Verify my email
+                        </a>
+                    </p>
+                    <p>If the button doesn't work, open this link:</p>
+                    <p><a href="${verificationLink}">${verificationLink}</a></p>
+                    <p>If you didn't create a MemoryVault account, you can ignore this email.</p>
+                </div>
+            `
+        });
 
         if (emailResult.error || !emailResult.data?.id) {
             console.error("Verification email was not confirmed.");
 
-            db.prepare(`
-                DELETE FROM users
-                WHERE email = ? AND email_verified = 0
-            `).run(normalizedEmail);
+            await pgPool.query(
+                `DELETE FROM users
+                 WHERE email = $1 AND email_verified = 0`,
+                [normalizedEmail]
+            );
 
             return res.status(502).json({
                 error: "We couldn't send the verification email. Please try registering again."
@@ -452,8 +403,10 @@ const emailResult = await resend.emails.send({
 });
 
 
+
 /* Verify a user's email address */
-app.get("/api/verify-email", (req, res) => {
+
+app.get("/api/verify-email", async (req, res) => {
     try {
         const token = String(req.query.token || "").trim();
 
@@ -461,11 +414,14 @@ app.get("/api/verify-email", (req, res) => {
             return res.status(400).send("Verification link is invalid.");
         }
 
-        const user = db.prepare(`
-            SELECT id
-            FROM users
-            WHERE verification_token = ?
-        `).get(token);
+        const result = await pgPool.query(
+            `SELECT id
+             FROM users
+             WHERE verification_token = $1`,
+            [token]
+        );
+
+        const user = result.rows[0];
 
         if (!user) {
             return res.status(400).send(
@@ -473,12 +429,13 @@ app.get("/api/verify-email", (req, res) => {
             );
         }
 
-        db.prepare(`
-            UPDATE users
-            SET email_verified = 1,
-                verification_token = NULL
-            WHERE id = ?
-        `).run(user.id);
+        await pgPool.query(
+            `UPDATE users
+             SET email_verified = 1,
+                 verification_token = NULL
+             WHERE id = $1`,
+            [user.id]
+        );
 
         res.send(`
             <!DOCTYPE html>
@@ -501,18 +458,29 @@ app.get("/api/verify-email", (req, res) => {
     }
 });
 
+
 /* Temporary endpoint to resend a verification email */
+
 app.post("/api/resend-verification", async (req, res) => {
     try {
         const email = String(req.body?.email || "")
             .trim()
             .toLowerCase();
 
-        const user = db.prepare(`
-            SELECT id, email_verified
-            FROM users
-            WHERE email = ?
-        `).get(email);
+        if (!email) {
+            return res.status(400).json({
+                error: "Email is required."
+            });
+        }
+
+        const userResult = await pgPool.query(
+            `SELECT id, email_verified
+             FROM users
+             WHERE email = $1`,
+            [email]
+        );
+
+        const user = userResult.rows[0];
 
         if (!user) {
             return res.status(404).json({
@@ -529,45 +497,46 @@ app.post("/api/resend-verification", async (req, res) => {
 
         const token = crypto.randomBytes(32).toString("hex");
 
-        db.prepare(`
-            UPDATE users
-            SET verification_token = ?
-            WHERE id = ?
-        `).run(token, user.id);
+        await pgPool.query(
+            `UPDATE users
+             SET verification_token = $1
+             WHERE id = $2`,
+            [token, user.id]
+        );
 
         const verificationLink =
             `${APP_URL}/api/verify-email?token=${token}`;
 
+        const result = await resend.emails.send({
+            from: EMAIL_FROM,
+            to: [email],
+            subject: "Verify your MemoryVault email",
+            html: `
+                <h2>Verify your MemoryVault account</h2>
+                <p>Click the link below to verify your email:</p>
+                <p><a href="${verificationLink}">Verify my email</a></p>
+            `
+        });
 
-const result = await resend.emails.send({
-    from: EMAIL_FROM,
-    to: [email],
-    subject: "Verify your MemoryVault email",
-    html: `
-        <h2>Verify your MemoryVault account</h2>
-        <p>Click the link below to verify your email:</p>
-        <p><a href="${verificationLink}">Verify my email</a></p>
-    `
-});
+        if (result.error || !result.data?.id) {
+            console.error("Resend did not confirm the verification email.");
+            return res.status(502).json({
+                error: "Could not confirm that the email was sent."
+            });
+        }
 
-
-       if (result.error || !result.data?.id) {
-    console.error("Resend did not confirm the verification email.");
-    return res.status(502).json({
-        error: "Could not confirm that the email was sent."
-    });
-}
         res.json({
             success: true,
             message: "Verification email sent successfully."
         });
     } catch (error) {
-        console.error("Gmail verification failed:", error);
-       res.status(500).json({
-    error: "Could not resend verification email. Please try again later."
-});
+        console.error("Resend verification error:", error);
+        res.status(500).json({
+            error: "Could not resend verification email. Please try again later."
+        });
     }
 });
+
 
 
 
@@ -576,107 +545,87 @@ const result = await resend.emails.send({
 // LOGIN
 // ============================================
 
+
 app.post("/api/login", async (req, res) => {
-
     try {
-
-        const {
-            email,
-            password
-        } = req.body;
-
+        const { email, password } = req.body;
 
         if (!email || !password) {
-
             return res.status(400).json({
-                error:
-                    "Email and password are required."
+                error: "Email and password are required."
             });
-
         }
 
+        const normalizedEmail = String(email).trim().toLowerCase();
 
-        const normalizedEmail =
-            String(email)
-                .trim()
-                .toLowerCase();
-
-
-        const user =
-            db.prepare(`
-                SELECT *
-                FROM users
-                WHERE email = ?
-            `).get(normalizedEmail);
-
-
-        if (!user) {
-
-            return res.status(401).json({
-                error:
-                    "Invalid email or password."
-            });
-
-        }
-
-
-        const validPassword =
-            await bcrypt.compare(
-                password,
-                user.password_hash
-            );
-
-
-        if (!validPassword) {
-
-            return res.status(401).json({
-                error:
-                    "Invalid email or password."
-            });
-
-        }
-
-if (!user.email_verified) {
-    return res.status(403).json({
-        error: "Please verify your email before logging in. Check your inbox."
-    });
-}
-
-console.log("[admin login check]", {
-    accountEmailMatches: user.email.toLowerCase() ===
-        String(process.env.ADMIN_EMAIL || "").trim().toLowerCase(),
-    role: user.role || "user"
-});
-        req.session.userId = user.id;
-
-
-
-res.json({
-    success: true,
-    user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role || "user"
-    }
-});
-
-
-    } catch (error) {
-
-        console.error(
-            "Login error:",
-            error
+        const result = await pgPool.query(
+            `SELECT *
+             FROM users
+             WHERE email = $1`,
+            [normalizedEmail]
         );
 
-        res.status(500).json({
-            error:
-                "Could not log in."
+        const user = result.rows[0];
+
+        if (!user) {
+            return res.status(401).json({
+                error: "Invalid email or password."
+            });
+        }
+
+        const validPassword = await bcrypt.compare(
+            password,
+            user.password_hash
+        );
+
+        if (!validPassword) {
+            return res.status(401).json({
+                error: "Invalid email or password."
+            });
+        }
+
+        if (!user.email_verified) {
+            return res.status(403).json({
+                error: "Please verify your email before logging in. Check your inbox."
+            });
+        }
+
+        const configuredAdminEmail = String(
+            process.env.ADMIN_EMAIL || ""
+        ).trim().toLowerCase();
+
+        if (
+            configuredAdminEmail &&
+            user.email.toLowerCase() === configuredAdminEmail
+        ) {
+            await pgPool.query(
+                "UPDATE users SET role = 'admin' WHERE id = $1",
+                [user.id]
+            );
+
+            user.role = "admin";
+        }
+
+        req.session.userId = user.id;
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role || "user"
+            }
         });
+    } catch (error) {
+        console.error("Login error:", error);
 
+        res.status(500).json({
+            error: "Could not log in."
+        });
     }
-
 });
+
 
 
 // ============================================
@@ -700,42 +649,34 @@ app.post("/api/logout", (req, res) => {
 // CURRENT USER
 // ============================================
 
-app.get(
-    "/api/me",
-    requireLogin,
-    (req, res) => {
 
-        const user =
-            db.prepare(`
+app.get("/api/me", requireLogin, async (req, res) => {
+    try {
+        const result = await pgPool.query(
+            `SELECT id, name, email, created_at, role
+             FROM users
+             WHERE id = $1`,
+            [req.session.userId]
+        );
 
-SELECT
-    id,
-    name,
-    email,
-    created_at,
-    role
-FROM users
-WHERE id = ?
-
-            `).get(req.session.userId);
-
+        const user = result.rows[0];
 
         if (!user) {
-
             return res.status(404).json({
-                error:
-                    "User not found."
+                error: "User not found."
             });
-
         }
 
+        res.json({ user });
+    } catch (error) {
+        console.error("Current user error:", error);
 
-        res.json({
-            user
+        res.status(500).json({
+            error: "Could not load user."
         });
-
     }
-);
+});
+
 
 
 // ============================================
@@ -743,129 +684,81 @@ WHERE id = ?
 // ============================================
 
 
-app.post(
-    "/api/memories",
-    requireLogin,
-    async (req, res) => {
-        try {
-            const {
-                title,
-                message,
-                revealAt,
-                category = "Personal"
-            } = req.body;
+app.post("/api/memories", requireLogin, async (req, res) => {
+    try {
+        const {
+            title,
+            message,
+            revealAt,
+            category = "Personal"
+        } = req.body;
 
-            if (!title || !message || !revealAt) {
-                return res.status(400).json({
-                    error: "Title, message and reveal date are required."
-                });
-            }
+        if (!title || !message || !revealAt) {
+            return res.status(400).json({
+                error: "Title, message and reveal date are required."
+            });
+        }
 
-            const revealDate = new Date(revealAt);
+        const revealDate = new Date(revealAt);
 
-            if (Number.isNaN(revealDate.getTime())) {
-                return res.status(400).json({
-                    error: "Invalid reveal date."
-                });
-            }
+        if (Number.isNaN(revealDate.getTime())) {
+            return res.status(400).json({
+                error: "Invalid reveal date."
+            });
+        }
 
-            if (revealDate <= new Date()) {
-                return res.status(400).json({
-                    error: "Reveal date must be in the future."
-                });
-            }
+        if (revealDate <= new Date()) {
+            return res.status(400).json({
+                error: "Reveal date must be in the future."
+            });
+        }
 
-            const cleanTitle = String(title).trim();
-            const cleanMessage = String(message).trim();
-            const cleanCategory = String(category).trim() || "Personal";
+        const cleanTitle = String(title).trim();
+        const cleanMessage = String(message).trim();
+        const cleanCategory = String(category).trim() || "Personal";
 
-            if (!cleanTitle || !cleanMessage) {
-                return res.status(400).json({
-                    error: "Title and message cannot be empty."
-                });
-            }
+        if (!cleanTitle || !cleanMessage) {
+            return res.status(400).json({
+                error: "Title and message cannot be empty."
+            });
+        }
 
-            const result = db.prepare(`
-                INSERT INTO memories (
-                    user_id,
-                    title,
-                    message,
-                    reveal_at,
-                    category
-                )
-                VALUES (?, ?, ?, ?, ?)
-            `).run(
+        const result = await pgPool.query(
+            `INSERT INTO memories (
+                user_id, title, message, reveal_at, category
+            )
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id`,
+            [
                 req.session.userId,
                 cleanTitle,
                 cleanMessage,
                 revealDate.toISOString(),
                 cleanCategory
-            );
+            ]
+        );
 
-            const user = db.prepare(`
-                SELECT name, email
-                FROM users
-                WHERE id = ?
-            `).get(req.session.userId);
+        res.status(201).json({
+            success: true,
+            memoryId: result.rows[0].id,
+            message: "Memory created successfully."
+        });
+    } catch (error) {
+        console.error("Memory creation error:", error);
 
-            if (user) {
-                try {
-
-
-const emailResult = await resend.emails.send({
-    from: EMAIL_FROM,
-    to: [normalizedEmail],
-    subject: "Verify your MemoryVault email",
-    html: `
-        <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;line-height:1.6">
-            <h2>Welcome to MemoryVault!</h2>
-            <p>Click the button below to verify your email address and activate your account.</p>
-            <p>
-                <a href="${verificationLink}"
-                   style="display:inline-block;padding:12px 20px;background:#222;color:#fff;text-decoration:none;border-radius:6px">
-                   Verify my email
-                </a>
-            </p>
-            <p>If the button doesn't work, open this link:</p>
-            <p><a href="${verificationLink}">${verificationLink}</a></p>
-            <p>If you didn't create a MemoryVault account, you can ignore this email.</p>
-        </div>
-    `
+        res.status(500).json({
+            error: "Could not create memory."
+        });
+    }
 });
 
-
-
-
-
-if (emailResult.error || !emailResult.data?.id) {
-    console.error("Memory confirmation email was not confirmed.");
-}
-} catch (emailError) {
-    console.error("Memory confirmation email error:", emailError);
-}
-}
-
-res.status(201).json({
-    success: true,
-    memoryId: result.lastInsertRowid,
-    message: "Memory created successfully."
-});
-
-} catch (error) {
-    console.error("Memory creation error:", error);
-
-    res.status(500).json({
-        error: "Could not create memory."
-    });
-}
-}
-);
 
 
 
 // ============================================
 // GET USER MEMORIES
 // ============================================
+
 
 
 app.get(
@@ -875,60 +768,68 @@ app.get(
         try {
             const now = new Date();
 
-const dueMemories = db.prepare(`
-    SELECT
-        id,
-        title,
-        reveal_at,
-        reveal_email_sent
-    FROM memories
-    WHERE user_id = ?
-      AND reveal_at <= ?
-      AND reveal_email_sent = 0
-`).all(
-    req.session.userId,
-    now.toISOString()
-);
-
-const user = db.prepare(`
-    SELECT name, email
-    FROM users
-    WHERE id = ?
-`).get(req.session.userId);
-
-for (const memory of dueMemories) {
-    try { 
-const emailResult = await resend.emails.send({
-    from: EMAIL_FROM,
-    to: [user.email],
-    subject: `A MemoryVault memory is ready to reveal: ${memory.title}`,
-    html: `
-        <div style="font-family:Arial,sans-serif;line-height:1.6">
-            <h2>Your memory is ready!</h2>
-            <p>Hello ${escapeHtml(user.name)},</p>
-            <p>Your memory "<strong>${escapeHtml(memory.title)}</strong>" has reached its reveal time.</p>
-            <p>Log in to MemoryVault to view it.</p>
-            <p><a href="${APP_URL}">Open MemoryVault</a></p>
-        </div>
-    `
-});
-        if (!emailResult.error && emailResult.data?.id) {
-            db.prepare(`
-                UPDATE memories
-                SET reveal_email_sent = 1
-                WHERE id = ?
-                  AND user_id = ?
+            const dueMemoriesResult = await pgPool.query(`
+                SELECT
+                    id,
+                    title,
+                    reveal_at,
+                    reveal_email_sent
+                FROM memories
+                WHERE user_id = $1
+                  AND reveal_at <= $2
                   AND reveal_email_sent = 0
-            `).run(memory.id, req.session.userId);
-        } else {
-            console.error("Reveal notification was not confirmed.");
-        }
-    } catch (emailError) {
-        console.error("Reveal notification error:", emailError);
-    }
-}
+            `, [
+                req.session.userId,
+                now.toISOString()
+            ]);
 
-            const memories = db.prepare(`
+            const userResult = await pgPool.query(`
+                SELECT name, email
+                FROM users
+                WHERE id = $1
+            `, [req.session.userId]);
+
+            const user = userResult.rows[0];
+
+            if (user) {
+                for (const memory of dueMemoriesResult.rows) {
+                    try {
+                        const emailResult = await resend.emails.send({
+                            from: EMAIL_FROM,
+                            to: [user.email],
+                            subject: `A MemoryVault memory is ready to reveal: ${memory.title}`,
+                            html: `
+                                <div style="font-family:Arial,sans-serif;line-height:1.6">
+                                    <h2>Your memory is ready!</h2>
+                                    <p>Hello ${escapeHtml(user.name)},</p>
+                                    <p>Your memory "<strong>${escapeHtml(memory.title)}</strong>" has reached its reveal time.</p>
+                                    <p>Log in to MemoryVault to view it.</p>
+                                    <p><a href="${APP_URL}">Open MemoryVault</a></p>
+                                </div>
+                            `
+                        });
+
+                        if (!emailResult.error && emailResult.data?.id) {
+                            await pgPool.query(`
+                                UPDATE memories
+                                SET reveal_email_sent = 1
+                                WHERE id = $1
+                                  AND user_id = $2
+                                  AND reveal_email_sent = 0
+                            `, [
+                                memory.id,
+                                req.session.userId
+                            ]);
+                        } else {
+                            console.error("Reveal notification was not confirmed.");
+                        }
+                    } catch (emailError) {
+                        console.error("Reveal notification error:", emailError);
+                    }
+                }
+            }
+
+            const memoriesResult = await pgPool.query(`
                 SELECT
                     id,
                     title,
@@ -938,9 +839,11 @@ const emailResult = await resend.emails.send({
                     revealed,
                     category
                 FROM memories
-                WHERE user_id = ?
+                WHERE user_id = $1
                 ORDER BY reveal_at ASC
-            `).all(req.session.userId);
+            `, [req.session.userId]);
+
+            const memories = memoriesResult.rows;
 
             const result = memories.map(memory => {
                 const isRevealed =
@@ -970,38 +873,41 @@ const emailResult = await resend.emails.send({
 // DELETE MEMORY
 // ============================================
 
+
 app.delete(
     "/api/memories/:id",
     requireLogin,
-    (req, res) => {
-
-        const result =
-            db.prepare(`
+    async (req, res) => {
+        try {
+            const result = await pgPool.query(`
                 DELETE FROM memories
-                WHERE id = ?
-                AND user_id = ?
-            `).run(
+                WHERE id = $1
+                  AND user_id = $2
+            `, [
                 Number(req.params.id),
                 req.session.userId
-            );
+            ]);
 
+            if (result.rowCount === 0) {
+                return res.status(404).json({
+                    error: "Memory not found."
+                });
+            }
 
-        if (result.changes === 0) {
-
-            return res.status(404).json({
-                error:
-                    "Memory not found."
+            res.json({
+                success: true
             });
 
+        } catch (error) {
+            console.error("Memory deletion error:", error);
+
+            res.status(500).json({
+                error: "Could not delete memory."
+            });
         }
-
-
-        res.json({
-            success: true
-        });
-
     }
 );
+
 
 
 // ============================================
