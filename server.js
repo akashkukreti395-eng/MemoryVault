@@ -33,7 +33,14 @@ const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 // DATABASE
 // ============================================
 
-const db = new Database("memoryvault.db");
+const db = new Database(
+    path.join(__dirname, "memoryvault.db")
+);
+console.log("[database setup]", {
+    directory: __dirname,
+    databasePath: path.join(__dirname, "memoryvault.db"),
+    adminEmailConfigured: Boolean(process.env.ADMIN_EMAIL)
+});
 
 db.pragma("foreign_keys = ON");
 
