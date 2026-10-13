@@ -705,17 +705,9 @@ app.post("/api/memories", requireLogin, async (req, res) => {
         }
 
         
-const revealDate =
-    typeof revealAt === "string" &&
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(revealAt)
-        ? new Date(
-            Number(revealAt.slice(0, 4)),
-            Number(revealAt.slice(5, 7)) - 1,
-            Number(revealAt.slice(8, 10)),
-            Number(revealAt.slice(11, 13)),
-            Number(revealAt.slice(14, 16))
-          )
-        : new Date(revealAt);
+
+const revealDate = new Date(revealAt);
+
 
 
         if (Number.isNaN(revealDate.getTime())) {

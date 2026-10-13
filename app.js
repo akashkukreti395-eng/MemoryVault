@@ -685,10 +685,17 @@ card.append(
         throw new Error("Please choose a future reveal date and time.");
       }
 
-      await requestJSON("/api/memories", {
-        method: "POST",
-        body: JSON.stringify(data)
-      });
+    
+const memoryData = {
+  ...data,
+  revealAt: new Date(data.revealAt).toISOString()
+};
+
+await requestJSON("/api/memories", {
+  method: "POST",
+  body: JSON.stringify(memoryData)
+});
+
 
       memoryForm.reset();
       showMemoryFormMessage("Memory saved successfully!");
