@@ -117,9 +117,21 @@ const adminEmail = String(process.env.ADMIN_EMAIL || "")
     .toLowerCase();
 
 if (adminEmail) {
-    db.prepare(
+    const result = db.prepare(
         "UPDATE users SET role = 'admin' WHERE lower(email) = ?"
     ).run(adminEmail);
+
+    const adminUser = db.prepare(
+        "SELECT role FROM users WHERE lower(email) = ?"
+    ).get(adminEmail);
+
+    console.log("[admin setup]", {
+        accountFound: Boolean(adminUser),
+        role: adminUser?.role ?? "not found",
+        rowsUpdated: result.changes
+    });
+} else {
+    console.log("[admin setup] ADMIN_EMAIL is not configured");
 }
 // Add the category column to existing databases safely.
 const memoryColumns = db
