@@ -642,7 +642,11 @@ if (!user.email_verified) {
     });
 }
 
-
+console.log("[admin login check]", {
+    accountEmailMatches: user.email.toLowerCase() ===
+        String(process.env.ADMIN_EMAIL || "").trim().toLowerCase(),
+    role: user.role || "user"
+});
         req.session.userId = user.id;
 
 
