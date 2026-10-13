@@ -112,8 +112,15 @@ if (!userColumns.some((column) => column.name === "role")) {
         ADD COLUMN role TEXT NOT NULL DEFAULT 'user'
     `);
 }
+const adminEmail = String(process.env.ADMIN_EMAIL || "")
+    .trim()
+    .toLowerCase();
 
-
+if (adminEmail) {
+    db.prepare(
+        "UPDATE users SET role = 'admin' WHERE lower(email) = ?"
+    ).run(adminEmail);
+}
 // Add the category column to existing databases safely.
 const memoryColumns = db
   .prepare("PRAGMA table_info(memories)")
