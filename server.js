@@ -6,20 +6,13 @@ const path = require("path");
 const dotenv = require("dotenv");
 const crypto = require("node:crypto");
 
-const nodemailer = require("nodemailer");
-
+const { Resend } = require("resend");
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD
-    }
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-const EMAIL_FROM = `MemoryVault <${process.env.GMAIL_USER}>`;
-
+const EMAIL_FROM =
+    process.env.EMAIL_FROM || "MemoryVault <onboarding@resend.dev>";
 
 function escapeHtml(value) {
     return String(value)
@@ -384,9 +377,10 @@ app.post("/api/register", async (req, res) => {
         const verificationLink =
             `${APP_URL}/api/verify-email?token=${verificationToken}`;
 
-const emailResult = await transporter.sendMail({
+
+const emailResult = await resend.emails.send({
     from: EMAIL_FROM,
-    to: normalizedEmail,
+    to: [normalizedEmail],
     subject: "Verify your MemoryVault email",
     html: `
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;line-height:1.6">
@@ -406,7 +400,7 @@ const emailResult = await transporter.sendMail({
 });
 
 
-        if (!emailResult.messageId) {
+        if (emailResult.error || !emailResult.data?.id) {
             console.error("Verification email was not confirmed.");
 
             db.prepare(`
@@ -519,9 +513,10 @@ app.post("/api/resend-verification", async (req, res) => {
         const verificationLink =
             `${APP_URL}/api/verify-email?token=${token}`;
 
-const result = await transporter.sendMail({
+
+const result = await resend.emails.send({
     from: EMAIL_FROM,
-    to: email,
+    to: [email],
     subject: "Verify your MemoryVault email",
     html: `
         <h2>Verify your MemoryVault account</h2>
@@ -530,8 +525,9 @@ const result = await transporter.sendMail({
     `
 });
 
-       if (!result.messageId) {
-    console.error("Gmail did not return a message ID.");
+
+       if (result.error || !result.data?.id) {
+    console.error("Resend did not confirm the verification email.");
     return res.status(502).json({
         error: "Could not confirm that the email was sent."
     });
@@ -786,9 +782,10 @@ app.post(
             if (user) {
                 try {
 
-const emailResult = await transporter.sendMail({
+
+const emailResult = await resend.emails.send({
     from: EMAIL_FROM,
-    to: normalizedEmail,
+    to: [normalizedEmail],
     subject: "Verify your MemoryVault email",
     html: `
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;line-height:1.6">
@@ -810,7 +807,8 @@ const emailResult = await transporter.sendMail({
 
 
 
-if (!emailResult.messageId) {
+
+if (emailResult.error || !emailResult.data?.id) {
     console.error("Memory confirmation email was not confirmed.");
 }
 } catch (emailError) {
@@ -870,23 +868,22 @@ const user = db.prepare(`
 `).get(req.session.userId);
 
 for (const memory of dueMemories) {
-    try {
-        const emailResult = await transporter.sendMail({
-            from: EMAIL_FROM,
-            to: user.email,
-            subject: `A MemoryVault memory is ready to reveal: ${memory.title}`,
-            html: `
-                <div style="font-family:Arial,sans-serif;line-height:1.6">
-                    <h2>Your memory is ready!</h2>
-                    <p>Hello ${escapeHtml(user.name)},</p>
-                    <p>Your memory "<strong>${escapeHtml(memory.title)}</strong>" has reached its reveal time.</p>
-                    <p>Log in to MemoryVault to view it.</p>
-                    <p><a href="${APP_URL}">Open MemoryVault</a></p>
-                </div>
-            `
-        });
-
-        if (emailResult.messageId) {
+    try { 
+const emailResult = await resend.emails.send({
+    from: EMAIL_FROM,
+    to: [user.email],
+    subject: `A MemoryVault memory is ready to reveal: ${memory.title}`,
+    html: `
+        <div style="font-family:Arial,sans-serif;line-height:1.6">
+            <h2>Your memory is ready!</h2>
+            <p>Hello ${escapeHtml(user.name)},</p>
+            <p>Your memory "<strong>${escapeHtml(memory.title)}</strong>" has reached its reveal time.</p>
+            <p>Log in to MemoryVault to view it.</p>
+            <p><a href="${APP_URL}">Open MemoryVault</a></p>
+        </div>
+    `
+});
+        if (!emailResult.error && emailResult.data?.id) {
             db.prepare(`
                 UPDATE memories
                 SET reveal_email_sent = 1
@@ -1006,12 +1003,14 @@ app.post("/api/test-email", async (req, res) => {
                 error: "Enter a valid recipient email."
             });
         }
-const result = await transporter.sendMail({
+
+const result = await resend.emails.send({
     from: EMAIL_FROM,
-    to: recipient,
+    to: [recipient],
     subject: "MemoryVault email test",
-    html: "<h2>MemoryVault email test</h2><p>If you received this email, your Gmail connection is working.</p>"
+    html: "<h2>MemoryVault email test</h2><p>If you received this email, your Resend connection is working.</p>"
 });
+
 
         if (result.error) {
             console.error("Resend test failed:", result.error);
