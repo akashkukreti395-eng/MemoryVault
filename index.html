@@ -609,9 +609,19 @@
         id="memoryMessage"
         name="message"
         rows="5"
-        placeholder="Write your memory here..."
-        required
+        placeholder="Write your memory here... (optional if you attach media)"
       ></textarea>
+
+      <label for="memoryMedia">Photos, videos or audio (optional)</label>
+      <input
+        id="memoryMedia"
+        name="media"
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/x-wav,audio/ogg,audio/webm"
+        multiple
+      />
+      <small class="media-upload-help">Up to 5 files per memory, 25 MB per file. Media stays private and is available when the memory unlocks.</small>
+      <p id="mediaSelectionSummary" class="media-selection-summary" aria-live="polite"></p>
 
       <label for="memoryRevealAt">Reveal date and time</label>
       <input

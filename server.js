@@ -5,14 +5,27 @@ const { Pool } = require("pg");
 const path = require("path");
 const dotenv = require("dotenv");
 const crypto = require("node:crypto");
+const multer = require("multer");
+const { createClient } = require("@supabase/supabase-js");
 
 const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 dotenv.config();
+
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const EMAIL_FROM =
     process.env.EMAIL_FROM || "MemoryVault <onboarding@resend.dev>";
+
+const smtpTransporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD
+    }
+});
+
 
 function escapeHtml(value) {
     return String(value)
@@ -36,8 +49,67 @@ const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 
 const pgPool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: true }
 });
+
+/*
+ * Private media storage uses Supabase Storage.
+ * Keep the bucket private; uploads and downloads are mediated by this backend.
+ */
+const supabaseConfigured = Boolean(
+    process.env.SUPABASE_URL && process.env.SUPABASE_SECRET_KEY && process.env.SUPABASE_STORAGE_BUCKET
+);
+
+const supabaseStorage = supabaseConfigured
+    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+    }).storage.from(process.env.SUPABASE_STORAGE_BUCKET)
+    : null;
+
+const MEDIA_MAX_FILE_BYTES = 25 * 1024 * 1024;
+const MEDIA_MAX_FILES_PER_MEMORY = 5;
+const mediaUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: MEDIA_MAX_FILE_BYTES,
+        files: MEDIA_MAX_FILES_PER_MEMORY,
+        fields: 10,
+        parts: MEDIA_MAX_FILES_PER_MEMORY + 10
+    },
+    fileFilter: (req, file, callback) => {
+        const allowedMimeTypes = new Set([
+            "image/jpeg", "image/png", "image/webp", "image/gif",
+            "video/mp4", "video/webm", "video/quicktime",
+            "audio/mpeg", "audio/mp4", "audio/aac", "audio/wav",
+            "audio/x-wav", "audio/ogg", "audio/webm"
+        ]);
+        if (!allowedMimeTypes.has(file.mimetype)) {
+            return callback(new Error("Unsupported media type. Upload an image, video, or audio file in a supported format."));
+        }
+        callback(null, true);
+    }
+});
+
+function mediaKind(mimeType) {
+    if (mimeType.startsWith("image/")) return "image";
+    if (mimeType.startsWith("video/")) return "video";
+    if (mimeType.startsWith("audio/")) return "audio";
+    return null;
+}
+
+function safeMediaName(name) {
+    return String(name || "upload").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-180);
+}
+
+function requireMediaStorage(req, res, next) {
+    if (!supabaseConfigured) {
+        return res.status(503).json({
+            error: "Media uploads are not configured yet. Set the Supabase Storage environment variables and redeploy."
+        });
+    }
+    next();
+}
+
 
 pgPool.query("SELECT 1")
     .then(() => {
@@ -84,12 +156,12 @@ app.use(express.json());
 app.use(express.urlencoded({
     extended: true
 }));
-
+if (!process.env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET must be configured.");
+}
 app.use(
     session({
-        secret:
-            process.env.SESSION_SECRET ||
-            "memoryvault-development-secret",
+       secret: process.env.SESSION_SECRET,
 
         resave: false,
 
@@ -353,34 +425,51 @@ app.post("/api/register", async (req, res) => {
 
         const verificationLink =
             `${APP_URL}/api/verify-email?token=${verificationToken}`;
+let emailResult;
 
-        const emailResult = await resend.emails.send({
-            from: EMAIL_FROM,
-            to: [normalizedEmail],
-            subject: "Verify your MemoryVault email",
-            html: `
-                <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;line-height:1.6">
-                    <h2>Welcome to MemoryVault!</h2>
-                    <p>Click the button below to verify your email address and activate your account.</p>
-                    <p>
-                        <a href="${verificationLink}"
-                           style="display:inline-block;padding:12px 20px;background:#222;color:#fff;text-decoration:none;border-radius:6px">
-                           Verify my email
-                        </a>
-                    </p>
-                    <p>If the button doesn't work, open this link:</p>
-                    <p><a href="${verificationLink}">${verificationLink}</a></p>
-                    <p>If you didn't create a MemoryVault account, you can ignore this email.</p>
-                </div>
-            `
-        });
+const verificationHtml = `
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;line-height:1.6">
+        <h2>Welcome to MemoryVault!</h2>
+        <p>Click the button below to verify your email address and activate your account.</p>
+        <p>
+            <a href="${verificationLink}"
+               style="display:inline-block;padding:12px 20px;background:#222;color:#fff;text-decoration:none;border-radius:6px">
+               Verify my email
+            </a>
+        </p>
+        <p>If the button doesn't work, open this link:</p>
+        <p><a href="${verificationLink}">${verificationLink}</a></p>
+        <p>If you didn't create a MemoryVault account, you can ignore this email.</p>
+    </div>
+`;
+
+if (process.env.RENDER) {
+    emailResult = await resend.emails.send({
+        from: EMAIL_FROM,
+        to: [normalizedEmail],
+        subject: "Verify your MemoryVault email",
+        html: verificationHtml
+    });
+} else {
+    emailResult = await smtpTransporter.sendMail({
+        from: `"MemoryVault" <${process.env.GMAIL_USER}>`,
+        to: normalizedEmail,
+        subject: "Verify your MemoryVault email",
+        html: verificationHtml
+    });
+}
+
 
        console.log(
     "[Registration email result]",
     JSON.stringify(emailResult)
 );
 
-if (emailResult.error || !emailResult.data?.id) {
+const emailFailed = process.env.RENDER
+    ? Boolean(emailResult.error || !emailResult.data?.id)
+    : !emailResult.messageId;
+
+if (emailFailed) {
     console.error("Verification email was not confirmed.");
 
             await pgPool.query(
@@ -466,6 +555,7 @@ app.get("/api/verify-email", async (req, res) => {
 
 /* Temporary endpoint to resend a verification email */
 
+
 app.post("/api/resend-verification", async (req, res) => {
     try {
         const email = String(req.body?.email || "")
@@ -493,7 +583,9 @@ app.post("/api/resend-verification", async (req, res) => {
             });
         }
 
-        if (user.email_verified) {
+        if (user.email_verified === true ||
+            user.email_verified === 1 ||
+            user.email_verified === "1") {
             return res.json({
                 success: true,
                 message: "Your email is already verified."
@@ -502,6 +594,55 @@ app.post("/api/resend-verification", async (req, res) => {
 
         const token = crypto.randomBytes(32).toString("hex");
 
+        const verificationLink =
+            `${APP_URL}/api/verify-email?token=${token}`;
+
+        const verificationHtml = `
+            <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;line-height:1.6">
+                <h2>Verify your MemoryVault account</h2>
+                <p>Click below to activate your account.</p>
+                <p>
+                    <a href="${verificationLink}"
+                       style="display:inline-block;padding:12px 20px;background:#222;color:#fff;text-decoration:none;border-radius:6px">
+                       Verify my email
+                    </a>
+                </p>
+                <p>If the button doesn't work, open this link:</p>
+                <p><a href="${verificationLink}">${verificationLink}</a></p>
+                <p>If you didn't request this email, you can ignore it.</p>
+            </div>
+        `;
+
+        let emailSent = false;
+
+        if (process.env.RENDER) {
+            const result = await resend.emails.send({
+                from: EMAIL_FROM,
+                to: [email],
+                subject: "Verify your MemoryVault email",
+                html: verificationHtml
+            });
+
+            emailSent = Boolean(result.data?.id && !result.error);
+        } else {
+            const result = await smtpTransporter.sendMail({
+                from: `"MemoryVault" <${process.env.GMAIL_USER}>`,
+                to: email,
+                subject: "Verify your MemoryVault email",
+                html: verificationHtml
+            });
+
+            emailSent = Boolean(result.messageId);
+        }
+
+        if (!emailSent) {
+            console.error("Verification email sending was not confirmed.");
+
+            return res.status(502).json({
+                error: "Could not send the verification email. Please try again."
+            });
+        }
+
         await pgPool.query(
             `UPDATE users
              SET verification_token = $1
@@ -509,34 +650,14 @@ app.post("/api/resend-verification", async (req, res) => {
             [token, user.id]
         );
 
-        const verificationLink =
-            `${APP_URL}/api/verify-email?token=${token}`;
-
-        const result = await resend.emails.send({
-            from: EMAIL_FROM,
-            to: [email],
-            subject: "Verify your MemoryVault email",
-            html: `
-                <h2>Verify your MemoryVault account</h2>
-                <p>Click the link below to verify your email:</p>
-                <p><a href="${verificationLink}">Verify my email</a></p>
-            `
-        });
-
-        if (result.error || !result.data?.id) {
-            console.error("Resend did not confirm the verification email.");
-            return res.status(502).json({
-                error: "Could not confirm that the email was sent."
-            });
-        }
-
-        res.json({
+        return res.json({
             success: true,
             message: "Verification email sent successfully."
         });
     } catch (error) {
         console.error("Resend verification error:", error);
-        res.status(500).json({
+
+        return res.status(500).json({
             error: "Could not resend verification email. Please try again later."
         });
     }
@@ -698,9 +819,9 @@ app.post("/api/memories", requireLogin, async (req, res) => {
             category = "Personal"
         } = req.body;
 
-        if (!title || !message || !revealAt) {
+        if (!title || !revealAt) {
             return res.status(400).json({
-                error: "Title, message and reveal date are required."
+                error: "Title and reveal date are required."
             });
         }
 
@@ -723,12 +844,19 @@ const revealDate = new Date(revealAt);
         }
 
         const cleanTitle = String(title).trim();
-        const cleanMessage = String(message).trim();
+        const cleanMessage = String(message || "").trim();
         const cleanCategory = String(category).trim() || "Personal";
 
-        if (!cleanTitle || !cleanMessage) {
+        if (!cleanTitle) {
             return res.status(400).json({
-                error: "Title and message cannot be empty."
+                error: "Title cannot be empty."
+            });
+        }
+        // Existing text-only memories remain supported. Media-only memories
+        // are allowed because attachments are uploaded immediately afterward.
+        if (!cleanMessage && req.body.allowMediaOnly !== true && req.body.allowMediaOnly !== "true") {
+            return res.status(400).json({
+                error: "Add a message or choose at least one media attachment."
             });
         }
 
@@ -762,6 +890,121 @@ const revealDate = new Date(revealAt);
 });
 
 
+
+
+// ============================================
+// MEMORY MEDIA
+// ============================================
+
+// Apply migrations/multimedia.sql to the production PostgreSQL database
+// before using these routes.
+app.post(
+    "/api/memories/:id/media",
+    requireLogin,
+    requireMediaStorage,
+    (req, res, next) => mediaUpload.array("media", MEDIA_MAX_FILES_PER_MEMORY)(req, res, (error) => {
+        if (error) {
+            if (error instanceof multer.MulterError) {
+                const message = error.code === "LIMIT_FILE_SIZE"
+                    ? "Each file must be 25 MB or smaller."
+                    : error.code === "LIMIT_FILE_COUNT"
+                        ? `Upload no more than ${MEDIA_MAX_FILES_PER_MEMORY} files per memory.`
+                        : "The upload exceeded an allowed limit.";
+                return res.status(400).json({ error: message });
+            }
+            return res.status(400).json({ error: error.message || "Invalid media upload." });
+        }
+        next();
+    }),
+    async (req, res) => {
+        const memoryId = Number(req.params.id);
+        if (!Number.isSafeInteger(memoryId) || memoryId <= 0) {
+            return res.status(400).json({ error: "Invalid memory ID." });
+        }
+        const files = req.files || [];
+        if (!files.length) {
+            return res.status(400).json({ error: "Choose at least one media file." });
+        }
+
+        const ownerResult = await pgPool.query(
+            "SELECT id FROM memories WHERE id = $1 AND user_id = $2",
+            [memoryId, req.session.userId]
+        );
+        if (!ownerResult.rowCount) {
+            return res.status(404).json({ error: "Memory not found." });
+        }
+
+        const uploadedKeys = [];
+        const client = await pgPool.connect();
+        try {
+            await client.query("BEGIN");
+            for (const file of files) {
+                const kind = mediaKind(file.mimetype);
+                if (!kind) throw new Error("Unsupported media type.");
+                const objectKey = `users/${req.session.userId}/memories/${memoryId}/${crypto.randomUUID()}-${safeMediaName(file.originalname)}`;
+                const { error: storageError } = await supabaseStorage.upload(objectKey, file.buffer, {
+                    contentType: file.mimetype,
+                    upsert: false,
+                    cacheControl: "60"
+                });
+                if (storageError) throw storageError;
+                uploadedKeys.push(objectKey);
+                await client.query(`
+                    INSERT INTO memory_attachments
+                        (memory_id, user_id, object_key, original_name, mime_type, media_type, size_bytes)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                `, [
+                    memoryId, req.session.userId, objectKey,
+                    safeMediaName(file.originalname), file.mimetype, kind, file.size
+                ]);
+            }
+            await client.query("COMMIT");
+            res.status(201).json({ success: true, uploaded: files.length });
+        } catch (error) {
+            await client.query("ROLLBACK").catch(() => {});
+            await supabaseStorage.remove(uploadedKeys).catch(() => {});
+            console.error("Media upload error:", error);
+            res.status(500).json({ error: "Could not save all media files. Please try again." });
+        } finally {
+            client.release();
+        }
+    }
+);
+
+app.get("/api/media/:id/access", requireLogin, requireMediaStorage, async (req, res) => {
+    try {
+        const attachmentId = Number(req.params.id);
+        if (!Number.isSafeInteger(attachmentId) || attachmentId <= 0) {
+            return res.status(400).json({ error: "Invalid media ID." });
+        }
+        const result = await pgPool.query(`
+            SELECT a.object_key, a.mime_type, a.original_name
+            FROM memory_attachments a
+            JOIN memories m ON m.id = a.memory_id
+            WHERE a.id = $1
+              AND a.user_id = $2
+              AND m.user_id = $2
+              AND NULLIF(m.reveal_at, '')::timestamptz <= NOW()
+        `, [attachmentId, req.session.userId]);
+
+        const attachment = result.rows[0];
+        if (!attachment) {
+            return res.status(404).json({ error: "Media not found or its memory is still locked." });
+        }
+
+        const { data, error } = await supabaseStorage.createSignedUrl(
+            attachment.object_key,
+            60,
+            { download: false }
+        );
+        if (error || !data?.signedUrl) throw error || new Error("Could not create signed URL.");
+
+        res.json({ url: data.signedUrl, mimeType: attachment.mime_type, name: attachment.original_name });
+    } catch (error) {
+        console.error("Media access error:", error);
+        res.status(500).json({ error: "Could not open this media file." });
+    }
+});
 
 
 // ============================================
@@ -846,7 +1089,21 @@ app.get(
                     reveal_at,
                     created_at,
                     revealed,
-                    category
+                    category,
+                    (SELECT COUNT(*)::int FROM memory_attachments a WHERE a.memory_id = memories.id AND a.user_id = $1) AS media_count,
+                    CASE WHEN NULLIF(reveal_at, '')::timestamptz <= NOW() THEN
+                        COALESCE((
+                            SELECT json_agg(json_build_object(
+                                'id', a.id,
+                                'original_name', a.original_name,
+                                'mime_type', a.mime_type,
+                                'media_type', a.media_type,
+                                'size_bytes', a.size_bytes
+                            ) ORDER BY a.created_at)
+                            FROM memory_attachments a
+                            WHERE a.memory_id = memories.id AND a.user_id = $1
+                        ), '[]'::json)
+                    ELSE '[]'::json END AS media
                 FROM memories
                 WHERE user_id = $1
                 ORDER BY reveal_at ASC

@@ -125,7 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return result;
   }
 
- 
+
 
 function showDashboard(user) {
   dashboard.classList.remove("hidden");
@@ -260,7 +260,7 @@ function closeAdminDashboard() {
   // Return directly to the normal dashboard.
   dashboard.classList.remove("hidden");
 
-  window.scrollTo({ top: 0, behavior: "smooth" }); 
+  window.scrollTo({ top: 0, behavior: "smooth" });
   const replayIntroBtn = document.getElementById("replayIntroBtn");
 if (replayIntroBtn) {
   replayIntroBtn.classList.remove("hidden");
@@ -268,7 +268,7 @@ if (replayIntroBtn) {
 }
 
 
-  
+
 async function loadAdminUsers() {
   const list = document.getElementById("adminUsersList");
   const total = document.getElementById("adminTotalUsers");
@@ -427,7 +427,6 @@ async function deleteAdminUser(userId, userName) {
 async function handleAuth(form, endpoint, buttonLabel) {
     const button = form.querySelector('button[type="submit"]');
     const originalLabel = buttonLabel;
-
     button.disabled = true;
     button.textContent = "Please wait...";
     showAuthMessage("");
@@ -535,7 +534,7 @@ capsuleTimers = [];
         return;
       }
 
-      
+
 const searchInput = document.getElementById("memorySearch");
 const filterSelect = document.getElementById("memoryFilter");
 
@@ -557,7 +556,7 @@ const filteredMemories = memories.filter((memory) => {
 
 filteredMemories.forEach((memory) => {
 
-        
+
 const card = document.createElement("article");
 card.className = "memory-card";
 
@@ -570,7 +569,7 @@ if (memory.revealed) {
         title.textContent = memory.title || "Untitled Memory";
 
         const status = document.createElement("span");
-        
+
 const category = document.createElement("span");
 category.className = "memory-category";
 category.textContent = memory.category || "Personal";
@@ -585,10 +584,109 @@ category.textContent = memory.category || "Personal";
           ? (memory.message || "")
           : "🔒 This memory is locked until its reveal date.";
 
+        const mediaContainer = document.createElement("div");
+        mediaContainer.className = "memory-media-list";
+        const mediaItems = Array.isArray(memory.media) ? memory.media : [];
+        if (!memory.revealed && Number(memory.media_count || 0) > 0) {
+          const lockedMedia = document.createElement("p");
+          lockedMedia.className = "memory-media-locked";
+          lockedMedia.textContent = `🔒 ${memory.media_count} media attachment(s) unlock with this memory`;
+          mediaContainer.appendChild(lockedMedia);
+        } else if (memory.revealed && mediaItems.length) {
+          mediaItems.forEach((item) => {
+            const mediaCard = document.createElement("div");
+            mediaCard.className = "memory-media-item";
+            const openButton = document.createElement("button");
+            openButton.type = "button";
+            openButton.className = "memory-media-open";
+           openButton.textContent = `Open ${item.media_type}: ${item.original_name}`;
+openButton.addEventListener("click", async () =>{
+  openButton.disabled = true;
+  try{
+    const access = await requestJSON(`/api/media/${item.id}/access`);
+
+    const overlay = document.createElement("div");
+    overlay.className = "media-preview-overlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", `Preview ${item.original_name}`);
+
+    const panel = document.createElement("div");
+    panel.className = "media-preview-panel";
+
+    const header = document.createElement("div");
+    header.className = "media-preview-header";
+
+    const heading = document.createElement("h2");
+    heading.className = "media-preview-title";
+    heading.textContent = item.original_name;
+
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "media-preview-close";
+    closeButton.textContent = "✕";
+    closeButton.setAttribute("aria-label", "Close media preview");
+
+    const closePreview = () => {
+      document.removeEventListener("keydown", onPreviewKeydown);
+      overlay.remove();
+    };
+
+    const onPreviewKeydown = (event) => {
+      if (event.key === "Escape") closePreview();
+    };
+
+    closeButton.addEventListener("click", closePreview);
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) closePreview();
+    });
+
+    header.append(heading, closeButton);
+
+    const content = document.createElement("div");
+    content.className = "media-preview-content";
+
+    let mediaElement;
+
+    if (item.media_type === "image") {
+      mediaElement = document.createElement("img");
+      mediaElement.alt = item.original_name;
+    } else if (item.media_type === "video") {
+      mediaElement = document.createElement("video");
+      mediaElement.controls = true;
+      mediaElement.playsInline = true;
+    } else if (item.media_type === "audio") {
+      mediaElement = document.createElement("audio");
+      mediaElement.controls = true;
+    } else {
+      throw new Error("Unsupported media type.");
+    }
+    mediaElement.className = "media-preview-player";
+    mediaElement.src = access.url;
+    content.appendChild(mediaElement);
+
+    panel.append(header, content);
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    document.addEventListener("keydown", onPreviewKeydown);
+    closeButton.focus();
+  } catch (error) {
+    window.alert(error.message || "Could not open this media file.");
+  } finally {
+    openButton.disabled = false;
+  }
+});
+
+            mediaCard.appendChild(openButton);
+            mediaContainer.appendChild(mediaCard);
+          });
+        }
+
         const date = document.createElement("p");
         date.className = "memory-date";
         date.textContent = `Reveal date: ${formatDate(memory.reveal_at)}`;
-        
+
 
 const countdown = document.createElement("p");
 countdown.className = "memory-countdown";
@@ -599,7 +697,7 @@ function updateCountdown() {
   const remaining =
     new Date(memory.reveal_at).getTime() - Date.now();
 
- 
+
 countdown.classList.toggle("unlocked", memory.revealed);
 
 countdown.textContent = memory.revealed
@@ -607,7 +705,7 @@ countdown.textContent = memory.revealed
   : `🔒 Unlocks in ${formatCountdown(memory.reveal_at)}`;
 
 
- 
+
 if (remaining <= 0 && !memory.revealed && !revealRefreshStarted) {
   revealRefreshStarted = true;
   clearInterval(timer);
@@ -653,12 +751,13 @@ updateCountdown();
           }
         });
 
-        
+
 card.append(
   title,
   category,
   status,
   message,
+  mediaContainer,
   countdown,
   date,
   deleteButton
@@ -670,34 +769,148 @@ card.append(
       memoriesList.textContent = error.message;
     }
   }
+const memoryMediaInput = document.getElementById("memoryMedia");
+const mediaSelectionSummary = document.getElementById("mediaSelectionSummary");
+let selectedMediaFiles = [];
+function renderSelectedMedia() {
+  if (!mediaSelectionSummary) return;
+
+  mediaSelectionSummary.replaceChildren();
+  mediaSelectionSummary.classList.remove("error");
+
+  const totalBytes = selectedMediaFiles.reduce(
+    (sum, file) => sum + file.size, 0
+  );
+
+  const summary = document.createElement("p");
+  summary.textContent = selectedMediaFiles.length
+    ? `${selectedMediaFiles.length}/5 files selected · ${(totalBytes / (1024 * 1024)).toFixed(1)} MB total`
+    : "No files selected";
+  mediaSelectionSummary.appendChild(summary);
+
+  selectedMediaFiles.forEach((file, index) => {
+    const row = document.createElement("div");
+    row.className = "media-selection-row";
+
+    const name = document.createElement("span");
+    name.textContent = `${file.name} · ${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Remove";
+    remove.setAttribute("aria-label", `Remove ${file.name}`);
+    remove.addEventListener("click", () => {
+      selectedMediaFiles.splice(index, 1);
+
+      const transfer = new DataTransfer();
+      selectedMediaFiles.forEach((selectedFile) => transfer.items.add(selectedFile));
+      memoryMediaInput.files = transfer.files;
+
+      renderSelectedMedia();
+    });
+
+    row.append(name, remove);
+    mediaSelectionSummary.appendChild(row);
+  });
+}
+
+if (memoryMediaInput && mediaSelectionSummary) {
+  memoryMediaInput.addEventListener("change", () => {
+    const newlySelected = Array.from(memoryMediaInput.files || []);
+    const combined = [...selectedMediaFiles];
+
+    for (const file of newlySelected) {
+      const duplicate = combined.some(
+        (existing) =>
+          existing.name === file.name &&
+          existing.size === file.size &&
+          existing.lastModified === file.lastModified
+      );
+
+      if (!duplicate) combined.push(file);
+  }
+const oversized = combined.find((file) => file.size > 25 * 1024 * 1024);
+if (combined.length > 5 || oversized) {
+  selectedMediaFiles = [];
+  const transfer = new DataTransfer();
+  memoryMediaInput.files = transfer.files;
+
+  mediaSelectionSummary.textContent = combined.length > 5
+    ? "You can select up to 5 files. Please select them again."
+    : `${oversized.name} exceeds the 25 MB per-file limit. Please select your files again.`;
+
+  mediaSelectionSummary.classList.add("error");
+  return;
+}
+    selectedMediaFiles = combined;
+
+    const transfer = new DataTransfer();
+    selectedMediaFiles.forEach((file) => transfer.items.add(file));
+    memoryMediaInput.files = transfer.files;
+
+    renderSelectedMedia();
+  });
+}
+
 
   memoryForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const button = memoryForm.querySelector('button[type="submit"]');
+    const selectedFiles = [...selectedMediaFiles];
+    const messageInput = document.getElementById("memoryMessage");
     button.disabled = true;
     showMemoryFormMessage("");
 
     try {
       const data = Object.fromEntries(new FormData(memoryForm).entries());
-
       if (new Date(data.revealAt).getTime() <= Date.now()) {
         throw new Error("Please choose a future reveal date and time.");
       }
+      if (!String(data.message || "").trim() && selectedFiles.length === 0) {
+        throw new Error("Write a message or attach at least one media file.");
+      }
+      if (selectedFiles.length > 5) {
+        throw new Error("Choose no more than 5 files per memory.");
+      }
+      const oversized = selectedFiles.find((file) => file.size > 25 * 1024 * 1024);
+      if (oversized) throw new Error(`${oversized.name} exceeds the 25 MB per-file limit.`);
 
-    
-const memoryData = {
-  ...data,
-  revealAt: new Date(data.revealAt).toISOString()
-};
+      const memoryData = {
+        title: data.title,
+        message: data.message || "",
+        category: data.category || "Personal",
+        revealAt: new Date(data.revealAt).toISOString(),
+        allowMediaOnly: selectedFiles.length > 0
+      };
 
-await requestJSON("/api/memories", {
-  method: "POST",
-  body: JSON.stringify(memoryData)
-});
+      const created = await requestJSON("/api/memories", {
+        method: "POST",
+        body: JSON.stringify(memoryData)
+      });
 
+      if (selectedFiles.length) {
+        const uploadData = new FormData();
+        selectedFiles.forEach((file) => uploadData.append("media", file));
+        const uploadResponse = await fetch(`/api/memories/${created.memoryId}/media`, {
+          method: "POST",
+          body: uploadData
+        });
+        const uploadResult = await uploadResponse.json().catch(() => ({}));
+        if (!uploadResponse.ok) {
+          throw new Error(
+            `Memory was created, but media upload failed: ${uploadResult.error || "Please retry the upload."} The memory record is saved.`
+          );
+        }
+      }
 
       memoryForm.reset();
+      selectedMediaFiles = [];
+renderSelectedMedia();
+      if (mediaSelectionSummary) {
+        mediaSelectionSummary.textContent = "";
+        mediaSelectionSummary.classList.remove("error");
+      }
       showMemoryFormMessage("Memory saved successfully!");
       await loadMemories();
     } catch (error) {
@@ -710,7 +923,7 @@ await requestJSON("/api/memories", {
   document.getElementById("refreshMemoriesBtn").addEventListener("click", () => {
     loadMemories();
   });
-  
+
 const refreshAdminUsersBtn = document.getElementById("refreshAdminUsersBtn");
 
 if (refreshAdminUsersBtn) {
@@ -755,7 +968,7 @@ document.querySelectorAll("#adminDashboardSection .cyber-nav-link").forEach((lin
   });
 });
 
-  
+
 // Search and filter memories
 const memorySearch = document.getElementById("memorySearch");
 const memoryFilter = document.getElementById("memoryFilter");
@@ -954,7 +1167,7 @@ memoryFilter.addEventListener("change", () => {
   let hasEntered = false;
 
   function enterVault() {
-    
+
 if (hasEntered) return;
 
 hasEntered = true;
@@ -998,7 +1211,7 @@ if (replayButton) {
     intro.dispatchEvent(new Event("cosmic-intro-replay"));
   });
 }
-  
+
 if (sessionStorage.getItem("memoryVaultIntroSeen") === "true") {
   intro.classList.add("intro-hidden");
   intro.setAttribute("aria-hidden", "true");

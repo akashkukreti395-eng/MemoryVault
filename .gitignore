@@ -22,3 +22,5 @@ private/
 # Logs
 logs/
 npm-debug.log*
+migrate-db.js
+test-db.js
