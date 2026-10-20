@@ -1090,6 +1090,7 @@ async function handleAuth(form, endpoint, buttonLabel) {
   }
 
 let capsuleTimers = [];
+let archiveMemories = [];
 
 function formatCountdown(revealAt) {
   const remaining = new Date(revealAt).getTime() - Date.now();
@@ -1172,19 +1173,23 @@ function renderMemoryEmptyState({
 }
 
 
-  async function loadMemories() {
-    capsuleTimers.forEach((timer) => clearInterval(timer));
+ async function loadMemories(useCache = false) {
+   capsuleTimers.forEach((timer) => clearInterval(timer));
 capsuleTimers = [];
-    renderMemoryLoadingSkeletons();
-
+if (!useCache) {
+  renderMemoryLoadingSkeletons();
+}
     try {
-      const result = await requestJSON("/api/memories");
-      const memories = Array.isArray(result) ? result : result.memories;
+     const result = useCache
+  ? archiveMemories
+  : await requestJSON("/api/memories");
+
+const memories = Array.isArray(result) ? result : result.memories;
 
       if (!Array.isArray(memories)) {
         throw new Error("The server returned an unexpected memory list.");
       }
-
+archiveMemories = memories;
       document.getElementById("totalMemories").textContent = memories.length;
       document.getElementById("lockedMemories").textContent =
         memories.filter((memory) => !memory.revealed).length;
@@ -1254,7 +1259,7 @@ if (filteredMemories.length === 0) {
     onAction: () => {
       if (searchInput) searchInput.value = "";
       if (filterSelect) filterSelect.value = "all";
-      loadMemories();
+      loadMemories(true);
     }
   });
 
@@ -1727,17 +1732,23 @@ if (adminMemoryStatusFilter) {
 if (adminMemoryCategoryFilter) {
   adminMemoryCategoryFilter.addEventListener("change", renderAdminMemoryList);
 }
-// Search and filter memories
-const memorySearch = document.getElementById("memorySearch");
-const memoryFilter = document.getElementById("memoryFilter");
 
-memorySearch.addEventListener("input", () => {
-  loadMemories();
-});
+  // Search and filter memories locally
+  const memorySearch = document.getElementById("memorySearch");
+  const memoryFilter = document.getElementById("memoryFilter");
 
-memoryFilter.addEventListener("change", () => {
-  loadMemories();
-});
+  if (memorySearch) {
+    memorySearch.addEventListener("input", () => {
+      loadMemories(true);
+    });
+  }
+
+  if (memoryFilter) {
+    memoryFilter.addEventListener("change", () => {
+      loadMemories(true);
+    });
+  }
+
 
 
   document.getElementById("logoutBtn").addEventListener("click", async () => {
