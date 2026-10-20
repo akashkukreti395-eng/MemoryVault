@@ -10164,3 +10164,565 @@ body.admin-media-viewer-open {
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+/* =========================================
+   MEMORYVAULT — PREMIUM MOTION V1
+   Local testing only
+   ========================================= */
+
+/* Smooth, consistent interaction timing */
+:root {
+    --mv-motion-fast: 180ms;
+    --mv-motion-smooth: 280ms;
+    --mv-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Dashboard surfaces */
+.dashboard-header,
+.dashboard-stat,
+.memory-create-card,
+.memory-card,
+#adminDashboardSection .cyber-metric-card {
+    transition:
+        transform var(--mv-motion-smooth) var(--mv-motion-ease),
+        border-color var(--mv-motion-smooth) ease,
+        box-shadow var(--mv-motion-smooth) ease,
+        background-color var(--mv-motion-smooth) ease;
+}
+
+/* Subtle lift with a refined glow */
+.dashboard-stat:hover,
+.memory-card:hover,
+#adminDashboardSection .cyber-metric-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.2);
+}
+
+/* Give the memory creation panel a gentle highlight */
+.memory-create-card:hover {
+    border-color: rgba(167, 151, 255, 0.22);
+}
+
+/* More responsive buttons */
+button,
+.btn,
+a.nav-login,
+.cosmic-enter-btn {
+    -webkit-tap-highlight-color: transparent;
+    transition:
+        transform var(--mv-motion-fast) var(--mv-motion-ease),
+        box-shadow var(--mv-motion-fast) ease,
+        border-color var(--mv-motion-fast) ease,
+        background-color var(--mv-motion-fast) ease,
+        opacity var(--mv-motion-fast) ease;
+}
+
+button:active:not(:disabled),
+.btn:active,
+a.nav-login:active,
+.cosmic-enter-btn:active {
+    transform: scale(0.98);
+}
+
+/* Clear keyboard focus without relying on hover */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+    outline: 2px solid #b7a7ff;
+    outline-offset: 4px;
+}
+
+/* Elegant input focus transitions */
+#memoryForm input,
+#memoryForm textarea,
+.auth-form input,
+.cyber-account-search-wrap,
+.cyber-memory-toolbar input,
+.cyber-memory-toolbar select,
+#adminRoleFilter {
+    transition:
+        border-color var(--mv-motion-fast) ease,
+        box-shadow var(--mv-motion-fast) ease;
+}
+
+/* Respect visitors who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .dashboard-stat:hover,
+    .memory-card:hover,
+    #adminDashboardSection .cyber-metric-card:hover,
+    button:active:not(:disabled),
+    .btn:active,
+    a.nav-login:active,
+    .cosmic-enter-btn:active {
+        transform: none;
+    }
+}
+
+/* =========================================
+   MEMORYVAULT — PREMIUM MEMORY CARDS V2
+   CSS-only | Local testing first
+   ========================================= */
+
+/* Refined glass surfaces */
+.memory-card {
+    background:
+        linear-gradient(
+            145deg,
+            rgba(157, 140, 255, 0.075),
+            transparent 48%
+        ),
+        linear-gradient(
+            160deg,
+            rgba(22, 25, 44, 0.96),
+            rgba(10, 13, 25, 0.97)
+        );
+
+    border: 1px solid rgba(180, 174, 255, 0.13);
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.035);
+
+    background-clip: padding-box;
+}
+
+/* Soft light sweep — stays behind card content */
+.memory-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(
+        115deg,
+        transparent 20%,
+        rgba(183, 167, 255, 0.055) 45%,
+        transparent 68%
+    );
+    background-size: 220% 100%;
+    background-position: 100% 0;
+    opacity: 0;
+    transition:
+        background-position 700ms ease,
+        opacity 300ms ease;
+}
+
+/* Gentle hover depth */
+.memory-card:hover {
+    border-color: rgba(183, 167, 255, 0.3);
+    box-shadow:
+        0 18px 40px rgba(0, 0, 0, 0.25),
+        0 0 22px rgba(157, 140, 255, 0.055),
+        inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+.memory-card:hover::after {
+    opacity: 1;
+    background-position: 0 0;
+}
+
+/* Locked memories: quiet, mysterious violet accent */
+.memory-card:not(:has(.memory-status.revealed)) {
+    border-color: rgba(157, 140, 255, 0.15);
+}
+
+.memory-card:not(:has(.memory-status.revealed)):hover {
+    border-color: rgba(157, 140, 255, 0.34);
+}
+
+/* Revealed memories: a gentle cool highlight */
+.memory-card:has(.memory-status.revealed) {
+    border-color: rgba(114, 214, 255, 0.19);
+}
+
+.memory-card:has(.memory-status.revealed):hover {
+    border-color: rgba(114, 214, 255, 0.36);
+    box-shadow:
+        0 18px 40px rgba(0, 0, 0, 0.25),
+        0 0 24px rgba(114, 214, 255, 0.07);
+}
+
+/* Refined countdown badge */
+.memory-countdown {
+    transition:
+        border-color 250ms ease,
+        background-color 250ms ease,
+        box-shadow 250ms ease;
+}
+
+.memory-card:hover .memory-countdown {
+    box-shadow: 0 0 16px rgba(157, 140, 255, 0.08);
+}
+
+/* Accessible motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .memory-card,
+    .memory-card::after,
+    .memory-countdown {
+        transition: none !important;
+        animation: none !important;
+    }
+
+    .memory-card:hover {
+        transform: none;
+    }
+
+    .memory-card:hover::after {
+        opacity: 0;
+    }
+}
+
+/* =========================================
+   MEMORYVAULT — PREMIUM DASHBOARD V3
+   Local testing only
+   ========================================= */
+
+/* Dashboard sections enter smoothly */
+@keyframes mvDashboardEnter {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dashboard-header,
+.dashboard-stats,
+.memory-create-card,
+#adminDashboardSection {
+    animation: mvDashboardEnter 520ms cubic-bezier(0.22, 1, 0.36, 1)
+        both;
+}
+
+/* Give dashboard sections a subtle visual rhythm */
+.dashboard-header {
+    animation-delay: 40ms;
+}
+
+.dashboard-stats {
+    animation-delay: 100ms;
+}
+
+.memory-create-card {
+    animation-delay: 150ms;
+}
+
+/* Memory cards appear in a gentle sequence */
+@keyframes mvMemoryCardEnter {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.99);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.memory-card {
+    animation: mvMemoryCardEnter 480ms cubic-bezier(0.22, 1, 0.36, 1)
+        both;
+}
+
+/* Limit the stagger so large memory lists stay responsive */
+.memory-card:nth-child(1) { animation-delay: 30ms; }
+.memory-card:nth-child(2) { animation-delay: 70ms; }
+.memory-card:nth-child(3) { animation-delay: 110ms; }
+.memory-card:nth-child(4) { animation-delay: 150ms; }
+.memory-card:nth-child(5) { animation-delay: 190ms; }
+.memory-card:nth-child(n + 6) { animation-delay: 220ms; }
+
+/* Empty states: clearer spacing and a gentle entrance.
+   Applies only when these common empty-state elements exist. */
+.empty-state,
+.no-memories,
+.empty-memories {
+    animation: mvDashboardEnter 450ms ease both;
+}
+
+/* Existing loading indicators, if present */
+.spinner,
+.loading-spinner {
+    will-change: transform;
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-header,
+    .dashboard-stats,
+    .memory-create-card,
+    #adminDashboardSection,
+    .memory-card,
+    .empty-state,
+    .no-memories,
+    .empty-memories {
+        animation: none !important;
+    }
+
+    .spinner,
+    .loading-spinner {
+        will-change: auto;
+    }
+}
+
+/* =========================================
+   MEMORYVAULT — PREMIUM MICRO-INTERACTIONS V4
+   CSS-only | Local testing first
+   ========================================= */
+
+/* Consistent button feedback */
+button,
+.btn,
+a.nav-login,
+.cosmic-enter-btn {
+    -webkit-tap-highlight-color: transparent;
+    transform-origin: center;
+}
+
+button:not(:disabled):hover,
+.btn:hover,
+a.nav-login:hover,
+.cosmic-enter-btn:hover {
+    filter: brightness(1.06);
+}
+
+button:disabled,
+button[aria-disabled="true"],
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    filter: saturate(0.65);
+}
+
+button:active:not(:disabled),
+.btn:active:not(:disabled),
+a.nav-login:active,
+.cosmic-enter-btn:active {
+    transform: scale(0.98);
+}
+
+/* Smooth, visible keyboard navigation */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+    outline: 2px solid #b7a7ff;
+    outline-offset: 3px;
+}
+
+/* Refined countdown appearance */
+.memory-countdown {
+    position: relative;
+    transition:
+        border-color 220ms ease,
+        background-color 220ms ease,
+        box-shadow 220ms ease;
+}
+
+.memory-card:not(:has(.memory-status.revealed)):hover
+.memory-countdown {
+    border-color: rgba(157, 140, 255, 0.3);
+    box-shadow: 0 0 14px rgba(157, 140, 255, 0.08);
+}
+
+.memory-card:has(.memory-status.revealed) .memory-countdown {
+    border-color: rgba(114, 214, 255, 0.2);
+}
+
+/* Better touch behavior on interactive cards */
+@media (hover: none) and (pointer: coarse) {
+    .memory-card:hover,
+    .dashboard-stat:hover,
+    #adminDashboardSection .cyber-metric-card:hover {
+        transform: none;
+    }
+
+    .memory-card:hover::after {
+        opacity: 0;
+    }
+
+    button,
+    .btn,
+    a.nav-login,
+    .cosmic-enter-btn {
+        min-height: 40px;
+    }
+}
+
+/* Keep interaction effects restrained for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    button,
+    .btn,
+    a.nav-login,
+    .cosmic-enter-btn,
+    .memory-countdown {
+        transition: none !important;
+    }
+
+    button:active:not(:disabled),
+    .btn:active:not(:disabled),
+    a.nav-login:active,
+    .cosmic-enter-btn:active {
+        transform: none;
+    }
+}
+
+/* =========================================
+   MEMORYVAULT — PREMIUM NOTIFICATIONS V5
+   Notification appearance and animation
+   ========================================= */
+
+.mv-toast-region {
+    position: fixed;
+    top: 22px;
+    right: 22px;
+    z-index: 10000;
+    display: grid;
+    gap: 12px;
+    width: min(390px, calc(100vw - 32px));
+    pointer-events: none;
+}
+
+.mv-toast {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 28px;
+    align-items: start;
+    gap: 12px;
+    padding: 15px;
+    border: 1px solid rgba(183, 167, 255, 0.2);
+    border-radius: 16px;
+    background: rgba(15, 18, 33, 0.96);
+    color: #f3f2ff;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+    transition:
+        opacity 240ms ease,
+        transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mv-toast.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.mv-toast-icon {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    background: rgba(183, 167, 255, 0.12);
+    color: #c5b8ff;
+    font-weight: 700;
+}
+
+.mv-toast-content {
+    min-width: 0;
+}
+
+.mv-toast-title {
+    margin: 1px 0 4px;
+    font-size: 0.94rem;
+    font-weight: 700;
+}
+
+.mv-toast-message {
+    margin: 0;
+    color: #b8bfd3;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.mv-toast-close {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #aeb5c9;
+    cursor: pointer;
+}
+
+.mv-toast-close:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.mv-toast-success {
+    border-left: 3px solid #55d6a2;
+}
+
+.mv-toast-success .mv-toast-icon {
+    color: #70e5b5;
+    background: rgba(85, 214, 162, 0.12);
+}
+
+.mv-toast-error {
+    border-left: 3px solid #ff777f;
+}
+
+.mv-toast-error .mv-toast-icon {
+    color: #ff9298;
+    background: rgba(255, 119, 127, 0.12);
+}
+
+.mv-toast-warning {
+    border-left: 3px solid #f3bd65;
+}
+
+.mv-toast-warning .mv-toast-icon {
+    color: #ffd18b;
+    background: rgba(243, 189, 101, 0.12);
+}
+
+.mv-toast-info {
+    border-left: 3px solid #72d6ff;
+}
+
+.mv-toast-info .mv-toast-icon {
+    color: #91e0ff;
+    background: rgba(114, 214, 255, 0.12);
+}
+
+@media (max-width: 520px) {
+    .mv-toast-region {
+        top: 12px;
+        right: 12px;
+        width: calc(100vw - 24px);
+    }
+
+    .mv-toast {
+        border-radius: 13px;
+        padding: 13px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mv-toast,
+    .mv-toast.is-visible {
+        transition: none;
+        transform: none;
+    }
+}

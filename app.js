@@ -1,5 +1,82 @@
 
 document.addEventListener("DOMContentLoaded", () => {
+  // =========================================
+  // MEMORYVAULT — PREMIUM NOTIFICATIONS V5
+  // =========================================
+  const mvToastRegion = document.getElementById("mvToastRegion");
+  const mvToastTimers = new WeakMap();
+
+  function showToast(message, type = "info", title = "") {
+    if (!mvToastRegion || !message) return;
+
+    const allowedTypes = ["success", "error", "warning", "info"];
+    const toastType = allowedTypes.includes(type) ? type : "info";
+
+    const defaults = {
+      success: { title: "Success", icon: "✓" },
+      error: { title: "Something went wrong", icon: "!" },
+      warning: { title: "Please note", icon: "⚠" },
+      info: { title: "MemoryVault", icon: "i" }
+    };
+
+    const config = defaults[toastType];
+    const toast = document.createElement("div");
+    toast.className = `mv-toast mv-toast-${toastType}`;
+    toast.setAttribute("role", toastType === "error" ? "alert" : "status");
+    toast.setAttribute("aria-live", toastType === "error" ? "assertive" : "polite");
+
+    const icon = document.createElement("span");
+    icon.className = "mv-toast-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = config.icon;
+
+    const content = document.createElement("div");
+    content.className = "mv-toast-content";
+
+    const heading = document.createElement("p");
+    heading.className = "mv-toast-title";
+    heading.textContent = title || config.title;
+
+    const text = document.createElement("p");
+    text.className = "mv-toast-message";
+    text.textContent = String(message);
+
+    content.append(heading, text);
+
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "mv-toast-close";
+    closeButton.setAttribute("aria-label", "Dismiss notification");
+    closeButton.textContent = "×";
+
+    let dismissed = false;
+
+    function dismissToast() {
+      if (dismissed) return;
+      dismissed = true;
+
+      clearTimeout(mvToastTimers.get(toast));
+      toast.classList.remove("is-visible");
+
+      toast.addEventListener("transitionend", () => toast.remove(), {
+        once: true
+      });
+
+      // Fallback for reduced-motion or interrupted transitions.
+      setTimeout(() => toast.remove(), 300);
+    }
+
+    closeButton.addEventListener("click", dismissToast);
+    toast.append(icon, content, closeButton);
+    mvToastRegion.appendChild(toast);
+
+    requestAnimationFrame(() => {
+      toast.classList.add("is-visible");
+    });
+
+    mvToastTimers.set(toast, setTimeout(dismissToast, 4500));
+  }
+
   const modal = document.getElementById("landingModal");
   const closeModalBtn = document.getElementById("closeLandingModal");
 
@@ -1266,10 +1343,17 @@ updateCountdown();
           deleteButton.disabled = true;
 
           try {
-            await requestJSON(`/api/memories/${memory.id}`, {
-              method: "DELETE"
-            });
-            await loadMemories();
+           await requestJSON(`/api/memories/${memory.id}`, {
+  method: "DELETE"
+});
+
+showToast(
+  "The memory has been permanently deleted.",
+  "success",
+  "Memory Deleted"
+);
+
+await loadMemories();
           } catch (error) {
             window.alert(error.message);
             deleteButton.disabled = false;
@@ -1436,11 +1520,24 @@ renderSelectedMedia();
         mediaSelectionSummary.textContent = "";
         mediaSelectionSummary.classList.remove("error");
       }
-      showMemoryFormMessage("Memory saved successfully!");
-      await loadMemories();
-    } catch (error) {
-      showMemoryFormMessage(error.message, true);
-    } finally {
+     showMemoryFormMessage("Memory saved successfully!");
+showToast(
+  "Your memory has been safely saved in MemoryVault.",
+  "success",
+  "Memory Created"
+);
+await loadMemories();
+
+} catch (error) {
+  showMemoryFormMessage(error.message, true);
+
+  showToast(
+    error.message || "Unable to save your memory. Please try again.",
+    "error",
+    "Memory Save Failed"
+  );
+} finally {
+
       button.disabled = false;
     }
   });
@@ -1541,8 +1638,13 @@ memoryFilter.addEventListener("change", () => {
 
   document.getElementById("logoutBtn").addEventListener("click", async () => {
     try {
-      await requestJSON("/api/logout", { method: "POST" });
-      showLandingPage();
+await requestJSON("/api/logout", { method: "POST" });
+showLandingPage();
+showToast(
+  "You have safely logged out of MemoryVault.",
+  "success",
+  "Logged Out"
+);
       memoryForm.reset();
       showMemoryFormMessage("");
       memoriesList.replaceChildren();
