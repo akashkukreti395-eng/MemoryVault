@@ -1107,10 +1107,75 @@ function formatCountdown(revealAt) {
   return `${days}d ${hours}h ${minutes}m ${seconds}s`;
 }
 
+function renderMemoryLoadingSkeletons(count = 3) {
+  if (!memoriesList) return;
+
+  const fragment = document.createDocumentFragment();
+
+  for (let index = 0; index < count; index++) {
+    const card = document.createElement("article");
+    card.className = "mv-memory-skeleton";
+    card.setAttribute("aria-hidden", "true");
+
+    card.innerHTML = `
+      <div class="mv-skeleton-line mv-skeleton-title"></div>
+      <div class="mv-skeleton-line mv-skeleton-category"></div>
+      <div class="mv-skeleton-line mv-skeleton-message"></div>
+      <div class="mv-skeleton-line mv-skeleton-message short"></div>
+      <div class="mv-skeleton-line mv-skeleton-date"></div>
+      <div class="mv-skeleton-line mv-skeleton-button"></div>
+    `;
+
+    fragment.appendChild(card);
+  }
+
+  memoriesList.setAttribute("aria-busy", "true");
+  memoriesList.replaceChildren(fragment);
+}
+
+function renderMemoryEmptyState({
+  icon = "✧",
+  title = "Nothing here yet",
+  message = "Your next memory is waiting to be created.",
+  buttonText = "",
+  onAction = null
+} = {}) {
+  if (!memoriesList) return;
+
+  const section = document.createElement("section");
+  section.className = "mv-empty-state";
+
+  const symbol = document.createElement("div");
+  symbol.className = "mv-empty-state-icon";
+  symbol.setAttribute("aria-hidden", "true");
+  symbol.textContent = icon;
+
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+
+  const description = document.createElement("p");
+  description.textContent = message;
+
+  section.append(symbol, heading, description);
+
+  if (buttonText && typeof onAction === "function") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-primary";
+    button.textContent = buttonText;
+    button.addEventListener("click", onAction);
+    section.appendChild(button);
+  }
+
+  memoriesList.setAttribute("aria-busy", "false");
+  memoriesList.replaceChildren(section);
+}
+
+
   async function loadMemories() {
     capsuleTimers.forEach((timer) => clearInterval(timer));
 capsuleTimers = [];
-    memoriesList.textContent = "Loading your memories...";
+    renderMemoryLoadingSkeletons();
 
     try {
       const result = await requestJSON("/api/memories");
@@ -1127,14 +1192,29 @@ capsuleTimers = [];
         memories.filter((memory) => memory.revealed).length;
 
       memoriesList.replaceChildren();
+memoriesList.setAttribute("aria-busy", "false");
+if (memories.length === 0) {
+  renderMemoryEmptyState({
+    icon: "✧",
+    title: "Your story starts here",
+    message:
+      "Every great memory begins with a moment. Save a message today and let your future self rediscover it.",
+    buttonText: "Create Your First Memory",
+    onAction: () => {
+      document.getElementById("vaultCreate")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
 
-      if (memories.length === 0) {
-        const emptyMessage = document.createElement("p");
-        emptyMessage.textContent =
-          "Your vault is empty. Create your first memory above!";
-        memoriesList.appendChild(emptyMessage);
-        return;
-      }
+      document.getElementById("memoryTitle")?.focus({
+        preventScroll: true
+      });
+    }
+  });
+
+  return;
+}
+
 
 
 const searchInput = document.getElementById("memorySearch");
@@ -1155,7 +1235,31 @@ const filteredMemories = memories.filter((memory) => {
 
   return matchesSearch && matchesStatus;
 });
+if (filteredMemories.length === 0) {
+  const hasSearch = Boolean(searchTerm);
+  const hasFilter = selectedFilter !== "all";
 
+  renderMemoryEmptyState({
+    icon: hasSearch ? "⌕" : "✧",
+    title: hasSearch
+      ? "No memories found"
+      : "Nothing in this filter yet",
+    message:
+      hasSearch && hasFilter
+        ? "No memories match your search and selected status."
+        : hasSearch
+          ? "Try a different search term."
+          : "Try another status filter to see more memories.",
+    buttonText: "Clear Search & Filters",
+    onAction: () => {
+      if (searchInput) searchInput.value = "";
+      if (filterSelect) filterSelect.value = "all";
+      loadMemories();
+    }
+  });
+
+  return;
+}
 filteredMemories.forEach((memory) => {
 
 
