@@ -751,37 +751,59 @@
     </section>
 
     <!-- Metrics and account management remain connected to existing JS -->
-    <section class="cyber-metrics">
-      <article class="cyber-metric-card cyan">
-        <div class="cyber-metric-top">
-          <span class="cyber-metric-icon">♙</span>
-          <span class="cyber-metric-label">DATABASE / 01</span>
-        </div>
-        <span id="adminTotalUsers" class="cyber-metric-number">0</span>
-        <p>REGISTERED ACCOUNTS</p>
-        <div class="cyber-metric-line"></div>
-      </article>
+   
+<div class="cyber-metrics-grid">
+  <article class="cyber-metric-card cyan">
+    <div class="cyber-metric-top">
+      <span class="cyber-metric-icon">♙</span>
+      <span class="cyber-metric-label">DATABASE / 01</span>
+    </div>
+    <span id="adminTotalUsers" class="cyber-metric-number">—</span>
+    <p>REGISTERED ACCOUNTS</p>
+    <div class="cyber-metric-line"></div>
+  </article>
 
-      <article class="cyber-metric-card magenta">
-        <div class="cyber-metric-top">
-          <span class="cyber-metric-icon">▤</span>
-          <span class="cyber-metric-label">ARCHIVE / 02</span>
-        </div>
-        <span class="cyber-metric-number">MEMORY</span>
-        <p>VAULT INSPECTION</p>
-        <div class="cyber-metric-line"></div>
-      </article>
+  <article class="cyber-metric-card magenta">
+    <div class="cyber-metric-top">
+      <span class="cyber-metric-icon">▤</span>
+      <span class="cyber-metric-label">ARCHIVE / 02</span>
+    </div>
+    <span id="adminTotalMemories" class="cyber-metric-number">—</span>
+    <p>TOTAL MEMORIES</p>
+    <div class="cyber-metric-line"></div>
+  </article>
 
-      <article class="cyber-metric-card violet">
-        <div class="cyber-metric-top">
-          <span class="cyber-metric-icon">⬡</span>
-          <span class="cyber-metric-label">SECURITY / 03</span>
-        </div>
-        <span class="cyber-metric-number">ACTIVE</span>
-        <p>CONTROL SESSION</p>
-        <div class="cyber-metric-line"></div>
-      </article>
-    </section>
+  <article class="cyber-metric-card purple">
+    <div class="cyber-metric-top">
+      <span class="cyber-metric-icon">▧</span>
+      <span class="cyber-metric-label">STORAGE / 03</span>
+    </div>
+    <span id="adminTotalAttachments" class="cyber-metric-number">—</span>
+    <p>MEDIA ATTACHMENTS</p>
+    <div class="cyber-metric-line"></div>
+  </article>
+
+  <article class="cyber-metric-card cyan">
+    <div class="cyber-metric-top">
+      <span class="cyber-metric-icon">◷</span>
+      <span class="cyber-metric-label">SECURITY / 04</span>
+    </div>
+    <span id="adminLockedMemories" class="cyber-metric-number">—</span>
+    <p>LOCKED MEMORIES</p>
+    <div class="cyber-metric-line"></div>
+  </article>
+
+  <article class="cyber-metric-card magenta">
+    <div class="cyber-metric-top">
+      <span class="cyber-metric-icon">✓</span>
+      <span class="cyber-metric-label">ARCHIVE / 05</span>
+    </div>
+    <span id="adminRevealedMemories" class="cyber-metric-number">—</span>
+    <p>REVEALED MEMORIES</p>
+    <div class="cyber-metric-line"></div>
+  </article>
+</div>
+
 
     <!-- Existing admin panel and JavaScript IDs are preserved -->
     <div id="adminPanelHost">
@@ -799,6 +821,29 @@
         </button>
       </div>
 
+<div class="cyber-account-toolbar">
+  <div class="cyber-account-search-wrap">
+    <span aria-hidden="true">⌕</span>
+    <input
+      id="adminUserSearch"
+      type="search"
+      placeholder="Search by name or email..."
+      aria-label="Search accounts by name or email"
+      autocomplete="off"
+    />
+  </div>
+
+  <select id="adminRoleFilter" aria-label="Filter accounts by role">
+    <option value="all">All roles</option>
+    <option value="user">Users only</option>
+    <option value="admin">Admins only</option>
+  </select>
+
+  <span id="adminUserResultCount" class="cyber-account-result-count">
+    Loading accounts...
+  </span>
+</div>
+
       <div class="cyber-table-label">
         <span class="cyber-status-dot"></span>
         ACCOUNT DIRECTORY
@@ -807,16 +852,42 @@
       <div id="adminUsersList" class="admin-users-list cyber-account-list">
         <p>Connecting to user database...</p>
       </div>
-
+<div id="adminUsersPagination" class="admin-pagination"></div>
       <section id="adminUserMemories" class="admin-user-memories hidden cyber-memory-inspector">
         <div class="cyber-section-heading">
           <div>
             <p class="cyber-eyebrow">ARCHIVE ACCESS // 03</p>
             <h2 id="adminSelectedUserTitle">User Memories</h2>
+            
+<div class="cyber-memory-toolbar">
+  <input
+    id="adminMemorySearch"
+    type="search"
+    placeholder="Search this vault..."
+    aria-label="Search memories by title or message"
+    autocomplete="off"
+  />
+
+  <select id="adminMemoryStatusFilter" aria-label="Filter by reveal status">
+    <option value="all">All statuses</option>
+    <option value="locked">Locked</option>
+    <option value="revealed">Revealed</option>
+  </select>
+
+  <select id="adminMemoryCategoryFilter" aria-label="Filter by category">
+    <option value="all">All categories</option>
+  </select>
+
+  <span id="adminMemoryResultCount" class="cyber-account-result-count">
+    Loading memories...
+  </span>
+</div>
+
           </div>
         </div>
 
         <div id="adminUserMemoriesList"></div>
+        <div id="adminMemoriesPagination" class="admin-pagination"></div>
       </section>
 
     </section>

@@ -258,6 +258,38 @@ app.get("/api/admin/users", requireAdmin, async (req, res) => {
     }
 });
 
+app.get("/api/admin/stats", requireAdmin, async (req, res) => {
+    try {
+        const result = await pgPool.query(`
+            SELECT
+                (SELECT COUNT(*)::int
+                 FROM users) AS total_users,
+
+                (SELECT COUNT(*)::int
+                 FROM memories) AS total_memories,
+
+                (SELECT COUNT(*)::int
+                 FROM memory_attachments) AS total_attachments,
+
+                (SELECT COUNT(*)::int
+                 FROM memories
+                 WHERE NULLIF(reveal_at, '')::timestamptz > NOW()
+                ) AS locked_memories,
+
+                (SELECT COUNT(*)::int
+                 FROM memories
+                 WHERE NULLIF(reveal_at, '')::timestamptz <= NOW()
+                ) AS revealed_memories
+        `);
+
+        res.json({ stats: result.rows[0] });
+    } catch (error) {
+        console.error("Admin statistics error:", error);
+        res.status(500).json({ error: "Unable to load admin statistics." });
+    }
+});
+
+
 
 
 app.get(
@@ -288,14 +320,40 @@ app.get(
                 });
             }
 
-            const memoriesResult = await pgPool.query(
-                `SELECT id, title, message, category,
-                        reveal_at, created_at, revealed
-                 FROM memories
-                 WHERE user_id = $1
-                 ORDER BY created_at DESC`,
-                [userId]
-            );
+           
+const memoriesResult = await pgPool.query(
+    `SELECT
+        m.id,
+        m.title,
+        m.message,
+        m.category,
+        m.reveal_at,
+        m.created_at,
+        m.revealed,
+        COALESCE(
+            (
+                SELECT json_agg(
+                    json_build_object(
+                        'id', a.id,
+                        'original_name', a.original_name,
+                        'mime_type', a.mime_type,
+                        'media_type', a.media_type,
+                        'size_bytes', a.size_bytes
+                    )
+                    ORDER BY a.created_at
+                )
+                FROM memory_attachments a
+                WHERE a.memory_id = m.id
+                  AND a.user_id = m.user_id
+            ),
+            '[]'::json
+        ) AS media
+     FROM memories m
+     WHERE m.user_id = $1
+     ORDER BY m.created_at DESC`,
+    [userId]
+);
+
 
             res.json({
                 user,
@@ -1005,6 +1063,41 @@ app.get("/api/media/:id/access", requireLogin, requireMediaStorage, async (req, 
         res.status(500).json({ error: "Could not open this media file." });
     }
 });
+
+app.get("/api/admin/media/:id/access", requireAdmin, requireMediaStorage, async (req, res) => {
+    try {
+        const attachmentId = Number(req.params.id);
+
+        if (!Number.isSafeInteger(attachmentId) || attachmentId <= 0) {
+            return res.status(400).json({ error: "Invalid attachment ID." });
+        }
+
+        const result = await pgPool.query(
+            `SELECT object_key
+             FROM memory_attachments
+             WHERE id = $1`,
+            [attachmentId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Attachment not found." });
+        }
+
+       const { data, error } = await supabaseStorage
+    .createSignedUrl(result.rows[0].object_key, 60);
+
+        if (error || !data?.signedUrl) {
+            console.error("Admin media access error:", error);
+            return res.status(500).json({ error: "Unable to access this attachment." });
+        }
+
+        return res.json({ url: data.signedUrl });
+    } catch (error) {
+        console.error("Admin media access error:", error);
+        return res.status(500).json({ error: "Unable to access this attachment." });
+    }
+});
+
 
 
 // ============================================

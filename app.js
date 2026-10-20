@@ -232,7 +232,10 @@ if (replayIntroBtn) {
 
     window.scrollTo(0, 0);
 
-    await loadAdminUsers();
+    await Promise.all([
+  loadAdminUsers(),
+  loadAdminStats()
+]);
   } catch (error) {
     console.error("Could not open Admin Dashboard:", error);
     window.alert("Could not open Admin Dashboard. Please check the browser console.");
@@ -269,9 +272,168 @@ if (replayIntroBtn) {
 
 
 
+function openAdminMediaViewer({ url, name, type, mimeType, size }) {
+  let modal = document.getElementById("adminMediaViewer");
+
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "adminMediaViewer";
+    modal.className = "admin-media-viewer hidden";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "adminMediaViewerTitle");
+
+    modal.innerHTML = `
+      <div class="admin-media-viewer-backdrop"></div>
+      <section class="admin-media-viewer-panel">
+        <header class="admin-media-viewer-header">
+          <div>
+            <p class="admin-media-viewer-eyebrow">MEMORYVAULT // MEDIA INSPECTOR</p>
+            <h2 id="adminMediaViewerTitle">Attachment Preview</h2>
+          </div>
+          <button type="button" class="admin-media-viewer-close"
+            aria-label="Close media preview">&times;</button>
+        </header>
+
+        <div class="admin-media-viewer-stage"></div>
+
+        <footer class="admin-media-viewer-footer">
+          <div class="admin-media-viewer-file">
+            <span class="admin-media-viewer-type"></span>
+            <div>
+              <p class="admin-media-viewer-name"></p>
+              <p class="admin-media-viewer-details"></p>
+            </div>
+          </div>
+          <span class="admin-media-viewer-secure">SECURE PREVIEW</span>
+        </footer>
+      </section>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeViewer = () => {
+      const stage = modal.querySelector(".admin-media-viewer-stage");
+      stage.replaceChildren();
+      modal.classList.add("hidden");
+      document.body.classList.remove("admin-media-viewer-open");
+    };
+
+    modal.querySelector(".admin-media-viewer-close")
+      .addEventListener("click", closeViewer);
+
+    modal.querySelector(".admin-media-viewer-backdrop")
+      .addEventListener("click", closeViewer);
+
+    modal._closeViewer = closeViewer;
+  }
+
+  const stage = modal.querySelector(".admin-media-viewer-stage");
+  stage.replaceChildren();
+
+  const normalizedType = String(type || "").toLowerCase();
+  const normalizedMime = String(mimeType || "").toLowerCase();
+
+  let mediaElement;
+
+  if (normalizedType === "image" && normalizedMime.startsWith("image/")) {
+    mediaElement = document.createElement("img");
+    mediaElement.alt = name || "Memory attachment";
+  } else if (
+    normalizedType === "video" &&
+    normalizedMime.startsWith("video/")
+  ) {
+    mediaElement = document.createElement("video");
+    mediaElement.controls = true;
+    mediaElement.playsInline = true;
+    mediaElement.preload = "metadata";
+  } else if (
+    normalizedType === "audio" &&
+    normalizedMime.startsWith("audio/")
+  ) {
+    mediaElement = document.createElement("audio");
+    mediaElement.controls = true;
+    mediaElement.preload = "metadata";
+  } else {
+    const message = document.createElement("p");
+    message.className = "admin-media-viewer-unsupported";
+    message.textContent =
+      "Preview is unavailable for this file type. Use the secure file link below.";
+    stage.appendChild(message);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "Open file in new tab";
+    link.className = "admin-media-viewer-open-link";
+    stage.appendChild(link);
+  }
+
+  if (mediaElement) {
+    mediaElement.className = "admin-media-viewer-media";
+    mediaElement.src = url;
+    mediaElement.addEventListener("error", () => {
+      const message = document.createElement("p");
+      message.className = "admin-media-viewer-unsupported";
+      message.textContent =
+        "This file could not be previewed. It may be unsupported or unavailable.";
+      stage.replaceChildren(message);
+    }, { once: true });
+    stage.appendChild(mediaElement);
+  }
+
+  modal.querySelector(".admin-media-viewer-type").textContent =
+    normalizedType.toUpperCase() || "FILE";
+  modal.querySelector(".admin-media-viewer-name").textContent =
+    name || "Untitled attachment";
+  modal.querySelector(".admin-media-viewer-details").textContent =
+    `${normalizedMime || "Unknown format"} · ${
+      size > 0 ? `${(size / (1024 * 1024)).toFixed(2)} MB` : "Size unavailable"
+    }`;
+
+  modal.classList.remove("hidden");
+  document.body.classList.add("admin-media-viewer-open");
+
+  modal.querySelector(".admin-media-viewer-close").focus();
+}
+
+async function loadAdminStats() {
+  const totalUsers = document.getElementById("adminTotalUsers");
+
+  if (!totalUsers) return;
+
+  const statIds = {
+    total_memories: "adminTotalMemories",
+    total_attachments: "adminTotalAttachments",
+    locked_memories: "adminLockedMemories",
+    revealed_memories: "adminRevealedMemories"
+  };
+
+  try {
+    const result = await requestJSON("/api/admin/stats");
+    const stats = result.stats;
+
+    totalUsers.textContent = stats.total_users ?? "0";
+
+    Object.entries(statIds).forEach(([key, id]) => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = stats[key] ?? "0";
+      }
+    });
+  } catch (error) {
+    console.error("Could not load admin statistics:", error);
+  }
+}
+let adminUsersPage = 1;
+const ADMIN_USERS_PER_PAGE = 5;
+
 async function loadAdminUsers() {
   const list = document.getElementById("adminUsersList");
   const total = document.getElementById("adminTotalUsers");
+  const pagination = document.getElementById("adminUsersPagination");
+  const resultCount = document.getElementById("adminUserResultCount");
 
   if (!list || !total) return;
 
@@ -279,16 +441,108 @@ async function loadAdminUsers() {
 
   try {
     const result = await requestJSON("/api/admin/users");
+    const users = Array.isArray(result.users) ? result.users : [];
 
-    total.textContent = result.users.length;
+    total.textContent = users.length;
+
+    const searchInput = document.getElementById("adminUserSearch");
+    const roleFilter = document.getElementById("adminRoleFilter");
+
+    const searchQuery = (searchInput?.value || "").trim().toLowerCase();
+    const selectedRole = (roleFilter?.value || "all").toLowerCase();
+
+    const filteredUsers = users.filter((user) => {
+      const name = String(user.name || "").toLowerCase();
+      const email = String(user.email || "").toLowerCase();
+      const role = String(user.role || "user").toLowerCase();
+
+      const matchesSearch =
+        name.includes(searchQuery) || email.includes(searchQuery);
+
+      const matchesRole =
+        selectedRole === "all" || role === selectedRole;
+
+      return matchesSearch && matchesRole;
+    });
+
+    if (resultCount) {
+      resultCount.textContent =
+        `${filteredUsers.length} of ${users.length} accounts`;
+    }
+
     list.replaceChildren();
 
-    if (result.users.length === 0) {
-      list.textContent = "No registered accounts found.";
+    if (filteredUsers.length === 0) {
+      list.textContent = users.length
+        ? "No accounts match your search."
+        : "No registered accounts found.";
+
+      if (pagination) pagination.replaceChildren();
+
+      adminUsersPage = 1;
       return;
     }
 
-    result.users.forEach((user) => {
+    const totalPages = Math.ceil(
+      filteredUsers.length / ADMIN_USERS_PER_PAGE
+    );
+
+    adminUsersPage = Math.min(
+      Math.max(1, adminUsersPage),
+      totalPages
+    );
+
+    const startIndex =
+      (adminUsersPage - 1) * ADMIN_USERS_PER_PAGE;
+
+    const paginatedUsers = filteredUsers.slice(
+      startIndex,
+      startIndex + ADMIN_USERS_PER_PAGE
+    );
+
+    // Account pagination
+    if (pagination) {
+      pagination.replaceChildren();
+
+      const previousButton = document.createElement("button");
+      previousButton.type = "button";
+      previousButton.className = "btn btn-secondary";
+      previousButton.textContent = "Previous";
+      previousButton.disabled = adminUsersPage === 1;
+
+      previousButton.addEventListener("click", () => {
+        if (adminUsersPage > 1) {
+          adminUsersPage--;
+          loadAdminUsers();
+        }
+      });
+
+      const pageLabel = document.createElement("span");
+      pageLabel.textContent =
+        `Page ${adminUsersPage} of ${totalPages}`;
+
+      const nextButton = document.createElement("button");
+      nextButton.type = "button";
+      nextButton.className = "btn btn-secondary";
+      nextButton.textContent = "Next";
+      nextButton.disabled = adminUsersPage === totalPages;
+
+      nextButton.addEventListener("click", () => {
+        if (adminUsersPage < totalPages) {
+          adminUsersPage++;
+          loadAdminUsers();
+        }
+      });
+
+      pagination.append(
+        previousButton,
+        pageLabel,
+        nextButton
+      );
+    }
+
+    // Render account cards
+    paginatedUsers.forEach((user) => {
       const card = document.createElement("article");
       card.className = "admin-user-card";
 
@@ -296,14 +550,14 @@ async function loadAdminUsers() {
       details.className = "admin-user-details";
 
       const name = document.createElement("h4");
-      name.textContent = user.name;
+      name.textContent = user.name || "Unnamed user";
 
       const email = document.createElement("p");
-      email.textContent = user.email;
+      email.textContent = user.email || "No email";
 
       const role = document.createElement("span");
       role.className = "admin-user-role";
-      role.textContent = user.role;
+      role.textContent = user.role || "user";
 
       details.append(name, email, role);
 
@@ -314,6 +568,7 @@ async function loadAdminUsers() {
       viewButton.type = "button";
       viewButton.className = "btn btn-secondary";
       viewButton.textContent = "View Memories";
+
       viewButton.addEventListener("click", () => {
         loadAdminUserMemories(user.id, user.name);
       });
@@ -322,6 +577,7 @@ async function loadAdminUsers() {
       deleteButton.type = "button";
       deleteButton.className = "btn btn-danger";
       deleteButton.textContent = "Delete Account";
+
       deleteButton.addEventListener("click", () => {
         deleteAdminUser(user.id, user.name);
       });
@@ -331,14 +587,28 @@ async function loadAdminUsers() {
       list.appendChild(card);
     });
   } catch (error) {
-    list.textContent = error.message;
+    list.textContent =
+      error.message || "Could not load user accounts.";
+
+    if (pagination) pagination.replaceChildren();
   }
 }
 
+
+
+let adminMemoryFilterState = {
+  userId: null,
+  userName: "",
+  memories: []
+};
+let adminMemoriesPage = 1;
+const ADMIN_MEMORIES_PER_PAGE = 5;
 async function loadAdminUserMemories(userId, userName) {
   const panel = document.getElementById("adminUserMemories");
   const title = document.getElementById("adminSelectedUserTitle");
   const list = document.getElementById("adminUserMemoriesList");
+
+  if (!panel || !title || !list) return;
 
   panel.classList.remove("hidden");
   title.textContent = `Memories belonging to ${userName}`;
@@ -349,44 +619,299 @@ async function loadAdminUserMemories(userId, userName) {
       `/api/admin/users/${userId}/memories`
     );
 
-    list.replaceChildren();
+    adminMemoryFilterState = {
+      userId,
+      userName,
+      memories: Array.isArray(result.memories) ? result.memories : []
+    };
+console.table(
+  adminMemoryFilterState.memories.map(memory => ({
+    title: memory.title,
+    reveal_at: memory.reveal_at,
+    parsedDate: Date.parse(memory.reveal_at),
+    isRevealed: Date.parse(memory.reveal_at) <= Date.now()
+  }))
+);
+    const searchInput = document.getElementById("adminMemorySearch");
+    const statusFilter = document.getElementById("adminMemoryStatusFilter");
+    const categoryFilter = document.getElementById("adminMemoryCategoryFilter");
 
-    if (result.memories.length === 0) {
-      list.textContent = "This account has no memories.";
-      return;
+    if (searchInput) searchInput.value = "";
+    if (statusFilter) statusFilter.value = "all";
+
+    if (categoryFilter) {
+      categoryFilter.replaceChildren();
+
+      [
+        { value: "all", label: "All categories" },
+        ...[...new Set(
+          adminMemoryFilterState.memories.map(
+            memory => String(memory.category || "Personal")
+          )
+        )].sort().map(category => ({
+          value: category,
+          label: category
+        }))
+      ].forEach(optionData => {
+        const option = document.createElement("option");
+        option.value = optionData.value;
+        option.textContent = optionData.label;
+        categoryFilter.appendChild(option);
+      });
     }
 
-    result.memories.forEach((memory) => {
-      const card = document.createElement("article");
-      card.className = "admin-memory-card";
-
-      const heading = document.createElement("h4");
-      heading.textContent = memory.title;
-
-      const category = document.createElement("span");
-      category.className = "memory-category";
-      category.textContent = memory.category || "Personal";
-
-      const status = document.createElement("p");
-      status.textContent =
-        new Date(memory.reveal_at) <= new Date()
-          ? "Revealed"
-          : "Locked";
-
-      const message = document.createElement("p");
-      message.textContent = memory.message;
-
-      const revealDate = document.createElement("p");
-      revealDate.textContent =
-        `Reveal date: ${new Date(memory.reveal_at).toLocaleString()}`;
-
-      card.append(heading, category, status, message, revealDate);
-      list.appendChild(card);
-    });
+    renderAdminMemoryList();
   } catch (error) {
-    list.textContent = error.message;
+    list.textContent = error.message || "Unable to load memories.";
   }
 }
+
+
+function renderAdminMemoryList() {
+  const list = document.getElementById("adminUserMemoriesList");
+  const resultCount = document.getElementById("adminMemoryResultCount");
+  const searchInput = document.getElementById("adminMemorySearch");
+  const statusFilter = document.getElementById("adminMemoryStatusFilter");
+  const categoryFilter = document.getElementById("adminMemoryCategoryFilter");
+  const pagination = document.getElementById("adminMemoriesPagination");
+
+  if (!list) return;
+
+  const memories = adminMemoryFilterState.memories || [];
+  const query = (searchInput?.value || "").trim().toLowerCase();
+  const selectedStatus = statusFilter?.value || "all";
+  const selectedCategory = categoryFilter?.value || "all";
+
+  // Apply search and filters before pagination.
+  const filtered = memories.filter((memory) => {
+    const title = String(memory.title || "").toLowerCase();
+    const message = String(memory.message || "").toLowerCase();
+    const category = String(memory.category || "Personal");
+    const revealTime = Date.parse(memory.reveal_at);
+    const isRevealed =
+      Number.isFinite(revealTime) && revealTime <= Date.now();
+
+    const matchesSearch =
+      title.includes(query) || message.includes(query);
+
+    const matchesStatus =
+      selectedStatus === "all" ||
+      (selectedStatus === "revealed" && isRevealed) ||
+      (selectedStatus === "locked" && !isRevealed);
+
+    const matchesCategory =
+      selectedCategory === "all" || category === selectedCategory;
+
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
+
+  if (resultCount) {
+    resultCount.textContent =
+      `${filtered.length} of ${memories.length} memories`;
+  }
+
+  list.replaceChildren();
+
+  // Handle empty search/filter results.
+  if (filtered.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "admin-memory-no-media";
+    empty.textContent = memories.length
+      ? "No memories match these filters."
+      : "This account has no memories.";
+
+    list.appendChild(empty);
+
+    if (pagination) pagination.replaceChildren();
+    adminMemoriesPage = 1;
+    return;
+  }
+
+  // Pagination: five memories per page.
+  const totalPages = Math.ceil(
+    filtered.length / ADMIN_MEMORIES_PER_PAGE
+  );
+
+  adminMemoriesPage = Math.min(
+    Math.max(1, adminMemoriesPage),
+    totalPages
+  );
+
+  const startIndex =
+    (adminMemoriesPage - 1) * ADMIN_MEMORIES_PER_PAGE;
+
+  const paginatedMemories = filtered.slice(
+    startIndex,
+    startIndex + ADMIN_MEMORIES_PER_PAGE
+  );
+
+  // Build pagination controls.
+  if (pagination) {
+    pagination.replaceChildren();
+
+    const previousButton = document.createElement("button");
+    previousButton.type = "button";
+    previousButton.className = "btn btn-secondary";
+    previousButton.textContent = "Previous";
+    previousButton.disabled = adminMemoriesPage === 1;
+
+    previousButton.addEventListener("click", () => {
+      if (adminMemoriesPage > 1) {
+        adminMemoriesPage--;
+        renderAdminMemoryList();
+      }
+    });
+
+    const pageLabel = document.createElement("span");
+    pageLabel.textContent =
+      `Page ${adminMemoriesPage} of ${totalPages}`;
+
+    const nextButton = document.createElement("button");
+    nextButton.type = "button";
+    nextButton.className = "btn btn-secondary";
+    nextButton.textContent = "Next";
+    nextButton.disabled = adminMemoriesPage === totalPages;
+
+    nextButton.addEventListener("click", () => {
+      if (adminMemoriesPage < totalPages) {
+        adminMemoriesPage++;
+        renderAdminMemoryList();
+      }
+    });
+
+    pagination.append(previousButton, pageLabel, nextButton);
+  }
+
+  // Render only the memories on the current page.
+  paginatedMemories.forEach((memory) => {
+    const card = document.createElement("article");
+    card.className = "admin-memory-card";
+
+    const heading = document.createElement("h4");
+    heading.textContent = memory.title || "Untitled memory";
+
+    const category = document.createElement("span");
+    category.className = "memory-category";
+    category.textContent = memory.category || "Personal";
+
+    const revealTime = Date.parse(memory.reveal_at);
+    const isRevealed =
+      Number.isFinite(revealTime) && revealTime <= Date.now();
+
+    const status = document.createElement("span");
+    status.className =
+      `cyber-memory-status ${isRevealed ? "is-revealed" : "is-locked"}`;
+    status.textContent = isRevealed ? "REVEALED" : "LOCKED";
+
+    const message = document.createElement("p");
+    message.className = "admin-memory-message";
+    message.textContent = memory.message || "No text message.";
+
+    const revealDate = document.createElement("p");
+    revealDate.className = "admin-memory-reveal-date";
+    revealDate.textContent = `Reveal date: ${
+      Number.isFinite(revealTime)
+        ? new Date(revealTime).toLocaleString()
+        : "Unavailable"
+    }`;
+
+    const mediaSection = document.createElement("div");
+    mediaSection.className = "admin-memory-media";
+
+    const attachments = Array.isArray(memory.media) ? memory.media : [];
+
+    const mediaHeading = document.createElement("h5");
+    mediaHeading.textContent = `Attachments (${attachments.length})`;
+    mediaSection.appendChild(mediaHeading);
+
+    if (attachments.length === 0) {
+      const emptyMedia = document.createElement("p");
+      emptyMedia.className = "admin-memory-no-media";
+      emptyMedia.textContent = "No media attached.";
+      mediaSection.appendChild(emptyMedia);
+    } else {
+      attachments.forEach((attachment) => {
+        const mediaRow = document.createElement("div");
+        mediaRow.className = "admin-memory-media-row";
+
+        const fileInfo = document.createElement("div");
+        fileInfo.className = "admin-memory-file-info";
+
+        const fileType = document.createElement("span");
+        fileType.className = "admin-memory-file-type";
+        fileType.textContent =
+          String(attachment.media_type || "file").toUpperCase();
+
+        const fileName = document.createElement("span");
+        fileName.className = "admin-memory-file-name";
+        fileName.textContent =
+          attachment.original_name || "Unnamed file";
+
+        const fileSize = document.createElement("span");
+        fileSize.className = "admin-memory-file-size";
+        const bytes = Number(attachment.size_bytes || 0);
+
+        fileSize.textContent = bytes > 0
+          ? `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+          : "Size unavailable";
+
+        fileInfo.append(fileType, fileName, fileSize);
+        mediaRow.appendChild(fileInfo);
+
+        const previewButton = document.createElement("button");
+        previewButton.type = "button";
+        previewButton.className = "admin-media-preview-btn";
+        previewButton.textContent = "Preview";
+
+        previewButton.addEventListener("click", async () => {
+          previewButton.disabled = true;
+          previewButton.textContent = "Loading...";
+
+          try {
+            const access = await requestJSON(
+              `/api/admin/media/${attachment.id}/access`
+            );
+
+            if (!access.url) {
+              throw new Error("No preview URL was returned.");
+            }
+
+            openAdminMediaViewer({
+              url: access.url,
+              name: attachment.original_name || "Untitled attachment",
+              type: attachment.media_type || "file",
+              mimeType: attachment.mime_type || "",
+              size: Number(attachment.size_bytes || 0)
+            });
+          } catch (error) {
+            window.alert(
+              error.message || "Unable to preview this attachment."
+            );
+          } finally {
+            previewButton.disabled = false;
+            previewButton.textContent = "Preview";
+          }
+        });
+
+        mediaRow.appendChild(previewButton);
+        mediaSection.appendChild(mediaRow);
+      });
+    }
+
+    card.append(
+      heading,
+      category,
+      status,
+      message,
+      revealDate,
+      mediaSection
+    );
+
+    list.appendChild(card);
+  });
+}
+
+
 
 async function deleteAdminUser(userId, userName) {
   const confirmed = window.confirm(
@@ -932,6 +1457,23 @@ if (refreshAdminUsersBtn) {
   });
 }
 
+const adminUserSearch = document.getElementById("adminUserSearch");
+const adminRoleFilter = document.getElementById("adminRoleFilter");
+
+if (adminUserSearch) {
+adminUserSearch.addEventListener("input", () => {
+  adminUsersPage = 1;
+  loadAdminUsers();
+});
+}
+
+if (adminRoleFilter) {
+ adminRoleFilter.addEventListener("change", () => {
+  adminUsersPage = 1;
+  loadAdminUsers();
+});
+}
+
 const openAdminDashboardBtn = document.getElementById("openAdminDashboardBtn");
 const backToVaultBtn = document.getElementById("backToVaultBtn");
 
@@ -968,7 +1510,22 @@ document.querySelectorAll("#adminDashboardSection .cyber-nav-link").forEach((lin
   });
 });
 
+// Admin memory search and filters
+const adminMemorySearch = document.getElementById("adminMemorySearch");
+const adminMemoryStatusFilter = document.getElementById("adminMemoryStatusFilter");
+const adminMemoryCategoryFilter = document.getElementById("adminMemoryCategoryFilter");
 
+if (adminMemorySearch) {
+  adminMemorySearch.addEventListener("input", renderAdminMemoryList);
+}
+
+if (adminMemoryStatusFilter) {
+  adminMemoryStatusFilter.addEventListener("change", renderAdminMemoryList);
+}
+
+if (adminMemoryCategoryFilter) {
+  adminMemoryCategoryFilter.addEventListener("change", renderAdminMemoryList);
+}
 // Search and filter memories
 const memorySearch = document.getElementById("memorySearch");
 const memoryFilter = document.getElementById("memoryFilter");
@@ -1337,3 +1894,4 @@ if (sessionStorage.getItem("memoryVaultIntroSeen") === "true") {
     else start();
   });
 })();
+
