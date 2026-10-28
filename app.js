@@ -2112,3 +2112,77 @@ if (sessionStorage.getItem("memoryVaultIntroSeen") === "true") {
   });
 })();
 
+
+
+/* =====================================================
+   MEMORYVAULT — PUBLIC LANDING MOTION
+   Scoped to marketing sections; dashboard/admin stay untouched.
+   ===================================================== */
+(() => {
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const publicSections = [
+    document.querySelector('.hero'),
+    document.querySelector('#how-it-works'),
+    document.querySelector('#features'),
+    document.querySelector('.memory-preview'),
+    document.querySelector('#start')
+  ].filter(Boolean);
+
+  if (reduceMotion || !('IntersectionObserver' in window)) return;
+
+  publicSections.forEach((section, sectionIndex) => {
+    section.classList.add('mv-scroll-reveal');
+    section.style.setProperty('--mv-reveal-delay', `${Math.min(sectionIndex * 45, 180)}ms`);
+    const children = section.querySelectorAll('.feature-card, .step-card, .memory-preview-card, .feature-item, .how-step, .feature');
+    children.forEach((child, index) => {
+      child.classList.add('mv-scroll-reveal', 'mv-reveal-child');
+      child.style.setProperty('--mv-reveal-delay', `${Math.min(index * 90, 360)}ms`);
+    });
+  });
+
+  document.body.classList.add('mv-motion-ready');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('mv-in-view');
+      observer.unobserve(entry.target);
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -7% 0px' });
+
+  document.querySelectorAll('.mv-scroll-reveal').forEach((element) => observer.observe(element));
+})();
+
+
+
+/* MEMORYVAULT — VAULT CORE DEPTH INTERACTION
+   Pointer response is decorative only and disabled for touch/reduced-motion. */
+(() => {
+  const intro = document.getElementById("cosmicIntro");
+  const stage = intro?.querySelector(".mv-vault-stage");
+  if (!intro || !stage) return;
+
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const finePointer = window.matchMedia("(pointer: fine)").matches;
+  if (reducedMotion || !finePointer) return;
+
+  let frame = 0;
+  const reset = () => {
+    stage.style.setProperty("--mv-stage-x", "0px");
+    stage.style.setProperty("--mv-stage-y", "0px");
+  };
+
+  intro.addEventListener("pointermove", (event) => {
+    if (intro.classList.contains("intro-opening") || intro.classList.contains("intro-hidden")) return;
+    if (frame) cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => {
+      const bounds = intro.getBoundingClientRect();
+      const x = (event.clientX - bounds.left) / bounds.width - 0.5;
+      const y = (event.clientY - bounds.top) / bounds.height - 0.5;
+      stage.style.setProperty("--mv-stage-x", `${(x * 13).toFixed(2)}px`);
+      stage.style.setProperty("--mv-stage-y", `${(y * 9).toFixed(2)}px`);
+    });
+  }, { passive: true });
+
+  intro.addEventListener("pointerleave", reset, { passive: true });
+  intro.addEventListener("cosmic-intro-replay", reset);
+})();

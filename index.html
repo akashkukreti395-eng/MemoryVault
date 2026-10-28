@@ -12,6 +12,7 @@
   >
 
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="motion-components.css">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
 </head>
@@ -23,67 +24,16 @@
 
 
 <div id="cosmicIntro" class="cosmic-intro">
-  <!-- CYBERPUNK SIDE ENVIRONMENT -->
-<div class="mv-cityscape" aria-hidden="true">
-  <div class="mv-city mv-city-left">
-    <i></i><i></i><i></i><i></i><i></i><i></i>
+  <!-- VAULT CORE ENVIRONMENT: layered CSS geometry, no image assets -->
+  <div class="mv-core-environment" aria-hidden="true">
+    <div class="mv-core-nebula mv-core-nebula-a"></div>
+    <div class="mv-core-nebula mv-core-nebula-b"></div>
+    <div class="mv-core-grid"></div>
+    <div class="mv-core-sweep"></div>
+    <div class="mv-core-data-label mv-core-label-left">ARCHIVE NODE <b>001</b><span>MEMORY FIELD STABLE</span></div>
+    <div class="mv-core-data-label mv-core-label-right">TEMPORAL ENGINE <b>ONLINE</b><span>ENCRYPTION ACTIVE</span></div>
+    <div class="mv-core-floor-line"></div>
   </div>
-  <div class="mv-city mv-city-right">
-    <i></i><i></i><i></i><i></i><i></i><i></i>
-  </div>
-  
-  <!-- DISTANT CYBERPUNK SKYLINE -->
-  <div class="mv-distant-skyline" aria-hidden="true">
-    <i></i><i></i><i></i><i></i>
-    <i></i><i></i><i></i><i></i>
-    <i></i><i></i><i></i><i></i>
-  </div>
-
-<!-- DISTANT HOLOGRAPHIC SIGNS -->
-<div class="mv-holo-signs" aria-hidden="true">
-  <div class="mv-holo-sign mv-holo-cyan">
-    <span>MEMORY</span>
-    <span>ARCHIVE // 09</span>
-  </div>
-
-  <div class="mv-holo-sign mv-holo-red">
-    <span>NEO CITY</span>
-    <span>SECTOR // 07</span>
-  </div>
-</div>
-
-
-  <div class="mv-side-panel mv-panel-left">
-    <span class="mv-panel-label">MEMORY ARCHIVE</span>
-    <span class="mv-panel-code">ARCHIVE_001</span>
-    <span class="mv-panel-line"></span>
-    <span class="mv-panel-status"><i></i> SIGNAL CONNECTED</span>
-    <span class="mv-panel-data">TIME CAPSULE // ACTIVE</span>
-        <div class="mv-data-stream" aria-hidden="true">
-      <span>01001001</span>
-      <span>MEM_7F2A</span>
-      <span>10110100</span>
-      <span>SYNC_99</span>
-    </div>
-  </div>
-
-  <div class="mv-side-panel mv-panel-right">
-    <span class="mv-panel-label">TEMPORAL SYSTEM</span>
-    <span class="mv-panel-code">TIMELINE_2099</span>
-    <span class="mv-panel-line"></span>
-    <span class="mv-panel-status"><i></i> SYSTEM STANDBY</span>
-    <span class="mv-panel-data">MEMORY SYNC // READY</span>
-        <div class="mv-data-stream mv-data-stream-red" aria-hidden="true">
-      <span>11001010</span>
-      <span>TIME_2049</span>
-      <span>00110111</span>
-      <span>CORE_OK</span>
-    </div>
-  </div>
-
-  <div class="mv-scan-beam"></div>
-</div>
-<!-- END CYBERPUNK SIDE ENVIRONMENT -->
   <canvas id="cosmicCanvas" aria-hidden="true"></canvas>
 
   <div class="cosmic-vignette" aria-hidden="true"></div>
@@ -92,27 +42,33 @@
   <div class="cosmic-content">
     <div class="cosmic-eyebrow">
       <span class="cosmic-status-dot"></span>
-      A PERSONAL TIME CAPSULE
+      YOUR MEMORIES. SAFELY PRESERVED.
     </div>
 
-    <div class="cosmic-capsule-scene" aria-hidden="true">
-      <div class="cosmic-orbit cosmic-orbit-one"></div>
-      <div class="cosmic-orbit cosmic-orbit-two"></div>
-      <div class="cosmic-orbit cosmic-orbit-three"></div>
-
-      <div class="cosmic-capsule">
-        <div class="capsule-glass">
-          <div class="capsule-reflection"></div>
-          <div class="capsule-core">
-            <span class="capsule-star">✦</span>
-            <span class="capsule-core-label">MV</span>
-          </div>
-          <div class="capsule-base"></div>
+    <div class="mv-vault-stage" aria-hidden="true">
+      <div class="mv-vault-aura"></div>
+      <div class="mv-vault-orbit mv-vault-orbit-outer"><i></i><i></i><i></i></div>
+      <div class="mv-vault-orbit mv-vault-orbit-mid"><i></i><i></i></div>
+      <div class="mv-vault-orbit mv-vault-orbit-inner"></div>
+      <div class="mv-vault-ring mv-vault-ring-back"></div>
+      <div class="mv-vault-ring mv-vault-ring-front"></div>
+      <div class="mv-vault-iris">
+        <div class="mv-vault-iris-blade blade-one"></div>
+        <div class="mv-vault-iris-blade blade-two"></div>
+        <div class="mv-vault-iris-blade blade-three"></div>
+        <div class="mv-vault-iris-blade blade-four"></div>
+        <div class="mv-vault-core-glass">
+          <div class="mv-vault-core-glint"></div>
+          <img src="/MemoryVault_App_Icon.svg" alt="" width="58" height="58" />
+          <span>MV / CORE</span>
         </div>
       </div>
-
-      <div class="cosmic-energy cosmic-energy-one"></div>
-      <div class="cosmic-energy cosmic-energy-two"></div>
+      <div class="mv-memory-shard shard-one"><span></span></div>
+      <div class="mv-memory-shard shard-two"><span></span></div>
+      <div class="mv-memory-shard shard-three"><span></span></div>
+      <div class="mv-memory-shard shard-four"><span></span></div>
+      <div class="mv-vault-scanline"></div>
+      <div class="mv-vault-coordinate">37° 14′ 06″ N<br>MEMORY SPACE / 01</div>
     </div>
 
     <h1 class="cosmic-title">
@@ -1060,6 +1016,7 @@
 <!-- END MEMORYVAULT PREMIUM NOTIFICATIONS -->
 
   <script src="app.js"></script>
+  <script src="motion-components.js"></script>
 
 </body>
 </html>

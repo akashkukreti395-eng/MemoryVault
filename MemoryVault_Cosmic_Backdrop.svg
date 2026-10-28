@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="space" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#020711"/>
+      <stop offset=".48" stop-color="#061126"/>
+      <stop offset="1" stop-color="#020611"/>
+    </linearGradient>
+    <radialGradient id="blueMist">
+      <stop offset="0" stop-color="#087ac5" stop-opacity=".30"/>
+      <stop offset=".42" stop-color="#0754a0" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#061126" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="violetMist">
+      <stop offset="0" stop-color="#6251d7" stop-opacity=".20"/>
+      <stop offset=".5" stop-color="#4332a5" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#061126" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="planet" cx="34%" cy="26%" r="76%">
+      <stop offset="0" stop-color="#7de4ff" stop-opacity=".85"/>
+      <stop offset=".13" stop-color="#236aa5" stop-opacity=".8"/>
+      <stop offset=".5" stop-color="#10284c" stop-opacity=".95"/>
+      <stop offset=".83" stop-color="#071124"/>
+      <stop offset="1" stop-color="#52caff" stop-opacity=".5"/>
+    </radialGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="42"/></filter>
+    <filter id="glow"><feGaussianBlur stdDeviation="7"/></filter>
+    <pattern id="stars" width="173" height="151" patternUnits="userSpaceOnUse">
+      <circle cx="13" cy="23" r="1.2" fill="#9ee8ff" opacity=".75"/>
+      <circle cx="94" cy="47" r=".8" fill="#b4a6ff" opacity=".7"/>
+      <circle cx="151" cy="112" r="1" fill="#d5edff" opacity=".6"/>
+      <circle cx="52" cy="131" r=".7" fill="#72cfff" opacity=".5"/>
+    </pattern>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#space)"/>
+  <ellipse cx="385" cy="470" rx="500" ry="410" fill="url(#blueMist)"/>
+  <ellipse cx="1540" cy="425" rx="500" ry="430" fill="url(#violetMist)"/>
+  <ellipse cx="960" cy="900" rx="760" ry="280" fill="#0872b5" opacity=".045" filter="url(#blur)"/>
+  <rect width="1920" height="1080" fill="url(#stars)" opacity=".68"/>
+  <!-- Tiny distant worlds at the edges; the center stays quiet for the vault. -->
+  <g opacity=".52">
+    <circle cx="145" cy="300" r="48" fill="#28b7f5" opacity=".12" filter="url(#glow)"/>
+    <circle cx="145" cy="300" r="31" fill="url(#planet)" opacity=".65"/>
+    <ellipse cx="145" cy="300" rx="58" ry="17" fill="none" stroke="#64d8ff" stroke-width="1.2" opacity=".38" transform="rotate(-19 145 300)"/>
+  </g>
+  <g opacity=".42">
+    <circle cx="1765" cy="785" r="37" fill="#8d79ff" opacity=".13" filter="url(#glow)"/>
+    <circle cx="1765" cy="785" r="24" fill="url(#planet)" opacity=".52"/>
+    <ellipse cx="1765" cy="785" rx="47" ry="13" fill="none" stroke="#9b8cff" stroke-width="1" opacity=".45" transform="rotate(24 1765 785)"/>
+  </g>
+  <!-- Sparse constellation lines only at the margins. -->
+  <g fill="none" stroke="#4daee7" stroke-width="1" opacity=".12">
+    <path d="M65 690 L126 646 L193 671 L244 615"/>
+    <path d="M1640 240 L1702 201 L1780 228 L1855 173"/>
+  </g>
+  <g fill="#9de9ff" opacity=".62">
+    <circle cx="65" cy="690" r="2"/><circle cx="126" cy="646" r="1.7"/><circle cx="193" cy="671" r="1.8"/><circle cx="244" cy="615" r="1.6"/>
+    <circle cx="1640" cy="240" r="1.5"/><circle cx="1702" cy="201" r="2"/><circle cx="1780" cy="228" r="1.4"/><circle cx="1855" cy="173" r="1.8"/>
+  </g>
+  <rect width="1920" height="1080" fill="url(#space)" opacity=".18"/>
+</svg>
