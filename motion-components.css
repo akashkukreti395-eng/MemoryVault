@@ -1,0 +1,286 @@
+/* MemoryVault Motion Components v1
+   Additive styles only. Keep existing stylesheets; load this AFTER style.css. */
+:root{
+  --mv-ease-out:cubic-bezier(.16,1,.3,1);
+  --mv-ease-cinematic:cubic-bezier(.7,0,.2,1);
+  --mv-duration-reveal:760ms;
+  --mv-cyan:rgba(71,211,255,.8);
+  --mv-violet:rgba(157,126,255,.72);
+}
+
+/* ---------- Cinematic intro: controlled light, scale and depth ---------- */
+#cosmicIntro{
+  background:
+    radial-gradient(ellipse at 50% 45%,rgba(0,151,255,.17),transparent 29%),
+    radial-gradient(ellipse at 50% 62%,rgba(98,63,237,.13),transparent 52%),
+    linear-gradient(180deg,#020610 0%,#050b1a 52%,#02050d 100%);
+}
+#cosmicIntro::before{
+  content:"";position:absolute;inset:-18%;z-index:0;pointer-events:none;
+  background:
+    repeating-radial-gradient(ellipse at 50% 47%,transparent 0 62px,rgba(90,203,255,.035) 63px 64px,transparent 65px 108px),
+    radial-gradient(ellipse at 50% 50%,transparent 25%,rgba(0,3,12,.82) 75%);
+  opacity:.7;animation:mvAtmosphere 12s ease-in-out infinite alternate;
+}
+#cosmicIntro .cosmic-content{width:min(860px,calc(100% - 32px));}
+#cosmicIntro .mv-vault-stage{
+  width:min(670px,97vw);height:clamp(290px,42vh,420px);
+  margin:clamp(2px,1vh,12px) 0 0;isolation:isolate;
+  animation:mvVaultMaterialize 1.85s var(--mv-ease-out) both;
+  will-change:transform,opacity,filter;
+}
+#cosmicIntro .mv-vault-aura{
+  width:74%;filter:blur(22px);
+  background:radial-gradient(circle,rgba(20,192,255,.3),rgba(72,84,255,.14) 38%,rgba(129,63,255,.06) 56%,transparent 73%);
+}
+#cosmicIntro .mv-vault-orbit-outer{width:98%;height:49%;border-color:rgba(84,211,255,.42);box-shadow:0 0 34px rgba(0,160,255,.13),inset 0 0 25px rgba(60,143,255,.06);}
+#cosmicIntro .mv-vault-orbit-mid{width:82%;height:62%;border-color:rgba(176,148,255,.38);}
+#cosmicIntro .mv-vault-orbit-inner{width:62%;height:72%;border-color:rgba(75,206,255,.28);}
+#cosmicIntro .mv-vault-ring-back{width:53%;border-width:2px;border-color:rgba(84,208,255,.48);box-shadow:0 0 0 12px rgba(26,126,221,.04),inset 0 0 34px rgba(42,172,255,.13),0 0 72px rgba(39,162,255,.25);}
+#cosmicIntro .mv-vault-ring-front{width:44%;border-width:2px;box-shadow:0 0 30px rgba(72,194,255,.27),inset 0 0 22px rgba(72,194,255,.08);}
+#cosmicIntro .mv-vault-iris{width:37%;box-shadow:0 0 0 1px rgba(143,231,255,.78),0 0 0 10px rgba(49,153,255,.09),0 0 82px rgba(0,170,255,.32),inset 0 0 36px rgba(75,197,255,.22);}
+#cosmicIntro .mv-vault-core-glass{
+  width:48%;border-color:rgba(199,246,255,.8);
+  background:radial-gradient(circle at 34% 20%,rgba(151,235,255,.32),transparent 34%),radial-gradient(circle at 50% 54%,rgba(10,78,133,.95),rgba(4,15,34,.98) 68%,rgba(28,18,66,.98));
+  box-shadow:inset 0 0 32px rgba(81,200,255,.24),0 0 38px rgba(0,184,255,.4),0 0 105px rgba(0,120,255,.16);
+}
+#cosmicIntro .mv-vault-core-glass img{filter:drop-shadow(0 0 13px rgba(62,210,255,.88));}
+#cosmicIntro .mv-memory-shard{filter:drop-shadow(0 0 15px rgba(57,205,255,.62));}
+#cosmicIntro .cosmic-eyebrow{animation:mvTextArrive .8s .18s var(--mv-ease-out) both;}
+#cosmicIntro .cosmic-title{animation:mvHeadlineArrive 1s .48s var(--mv-ease-out) both;text-shadow:0 8px 44px rgba(0,0,0,.62);}
+#cosmicIntro .cosmic-description{animation:mvTextArrive .85s .68s var(--mv-ease-out) both;}
+#cosmicIntro .cosmic-enter-btn{animation:mvButtonArrive .85s .88s var(--mv-ease-out) both;}
+#cosmicIntro .cosmic-footer{animation:mvTextArrive .8s 1.02s var(--mv-ease-out) both;}
+#cosmicIntro .cosmic-corner{animation:mvCornerArrive 1.1s .35s ease both;}
+#cosmicIntro.intro-opening::before{animation:mvCoreFlash .95s ease-in forwards;}
+#cosmicIntro.intro-opening .mv-vault-stage{animation:mvVaultDive 1.15s var(--mv-ease-cinematic) forwards;}
+#cosmicIntro.intro-opening .mv-core-environment{animation:mvWorldFlash 1s ease-in forwards;}
+#cosmicIntro.intro-opening .cosmic-eyebrow,
+#cosmicIntro.intro-opening .cosmic-title,
+#cosmicIntro.intro-opening .cosmic-description,
+#cosmicIntro.intro-opening .cosmic-enter-btn,
+#cosmicIntro.intro-opening .cosmic-footer,
+#cosmicIntro.intro-opening .cosmic-corner{animation:mvTextExit .32s ease-in forwards;}
+#cosmicIntro.intro-opening .mv-vault-core-glass{box-shadow:0 0 95px rgba(78,220,255,.95),0 0 200px rgba(65,105,255,.62),inset 0 0 65px rgba(145,240,255,.6);}
+@keyframes mvAtmosphere{from{transform:scale(1);opacity:.4}to{transform:scale(1.07);opacity:.8}}
+@keyframes mvVaultMaterialize{0%{opacity:0;filter:blur(20px);transform:translate3d(0,34px,-140px) scale(.62) rotateX(10deg)}58%{opacity:1;filter:blur(0);transform:translate3d(0,-5px,0) scale(1.035)}100%{opacity:1;filter:none;transform:translate3d(0,0,0) scale(1)}}
+@keyframes mvHeadlineArrive{from{opacity:0;filter:blur(12px);transform:translateY(25px);letter-spacing:.02em}to{opacity:1;filter:blur(0);transform:translateY(0)}}
+@keyframes mvTextArrive{from{opacity:0;transform:translateY(13px)}to{opacity:1;transform:translateY(0)}}
+@keyframes mvButtonArrive{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes mvCornerArrive{from{opacity:0}to{opacity:1}}
+@keyframes mvVaultDive{0%{transform:scale(1);filter:brightness(1)}38%{transform:scale(1.13) rotate(-3deg);filter:brightness(1.8)}100%{transform:scale(3.9) rotate(7deg);filter:brightness(2.7);opacity:0}}
+@keyframes mvWorldFlash{to{transform:scale(1.16);opacity:0;filter:blur(14px)}}
+@keyframes mvCoreFlash{0%{opacity:.6}32%{opacity:1;filter:brightness(1.9)}100%{opacity:0}}
+@keyframes mvTextExit{to{opacity:0;filter:blur(7px);transform:translateY(-7px)}}
+
+/* Retire the previous generic landing fade so the component system below
+   owns the reveal choreography instead of stacking two animations. */
+.mv-scroll-reveal,.mv-scroll-reveal.mv-in-view{
+  opacity:1;transform:none;filter:none;transition:none;
+}
+
+/* ---------- Reusable motion components ---------- */
+.mv-motion-item{
+  --mv-motion-delay:0ms;
+  opacity:0;transform:translate3d(0,24px,0) scale(.99);
+  filter:blur(3px);
+  transition:opacity var(--mv-duration-reveal) var(--mv-ease-out) var(--mv-motion-delay),
+    transform var(--mv-duration-reveal) var(--mv-ease-out) var(--mv-motion-delay),
+    filter var(--mv-duration-reveal) ease var(--mv-motion-delay);
+  backface-visibility:hidden;
+}
+.mv-motion-item.mv-motion-visible{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0);}
+.mv-motion-item.mv-motion-from-left{transform:translate3d(-28px,0,0); }
+.mv-motion-item.mv-motion-from-right{transform:translate3d(28px,0,0); }
+.mv-motion-item.mv-motion-scale{transform:translate3d(0,12px,0) scale(.94);}
+.mv-motion-item.mv-motion-visible.mv-motion-from-left,
+.mv-motion-item.mv-motion-visible.mv-motion-from-right,
+.mv-motion-item.mv-motion-visible.mv-motion-scale{transform:translate3d(0,0,0) scale(1);}
+.mv-motion-item.mv-motion-fast{--mv-duration-reveal:480ms;}
+.mv-motion-item.mv-motion-slow{--mv-duration-reveal:1000ms;}
+
+/* A shared, restrained hover language for interactive surfaces. */
+.mv-motion-hover{
+  transform:translateZ(0);
+  transition:transform 300ms var(--mv-ease-out),border-color 300ms ease,box-shadow 300ms ease,background-color 300ms ease;
+}
+@media (hover:hover) and (pointer:fine){
+  .mv-motion-hover:hover{transform:translate3d(0,-5px,0);border-color:rgba(80,206,255,.34);box-shadow:0 18px 46px rgba(0,0,0,.24),0 0 28px rgba(0,174,255,.055);}
+  .mv-motion-hover:active{transform:translate3d(0,-1px,0) scale(.995);}
+}
+
+/* Dashboard: purposeful cascade when a user signs in. */
+#dashboardSection.mv-screen-enter .vault-system-bar,
+#dashboardSection.mv-screen-enter .dashboard-header,
+#dashboardSection.mv-screen-enter .dashboard-stats,
+#dashboardSection.mv-screen-enter .dashboard-workspace,
+#dashboardSection.mv-screen-enter .vault-archive-panel{
+  animation:mvDashboardEnter .72s var(--mv-ease-out) both;
+}
+#dashboardSection.mv-screen-enter .dashboard-header{animation-delay:70ms;}
+#dashboardSection.mv-screen-enter .dashboard-stats{animation-delay:130ms;}
+#dashboardSection.mv-screen-enter .dashboard-workspace{animation-delay:200ms;}
+#dashboardSection.mv-screen-enter .vault-archive-panel{animation-delay:270ms;}
+@keyframes mvDashboardEnter{from{opacity:0;transform:translateY(18px);filter:blur(4px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
+#dashboardSection .dashboard-stat,
+#dashboardSection .memory-create-card,
+#dashboardSection .memory-card,
+#dashboardSection .vault-archive-panel,
+#dashboardSection .dashboard-workspace .panel,
+#dashboardSection .dashboard-workspace article{
+  will-change:transform;
+}
+
+/* Admin: consistent system-console entrance and component motion. */
+#adminDashboardSection.mv-screen-enter .cyber-topbar,
+#adminDashboardSection.mv-screen-enter .cyber-page-heading,
+#adminDashboardSection.mv-screen-enter .cyber-metrics,
+#adminDashboardSection.mv-screen-enter .cyber-main,
+#adminDashboardSection.mv-screen-enter .admin-panel,
+#adminDashboardSection.mv-screen-enter #adminPanelHost{
+  animation:mvAdminEnter .78s var(--mv-ease-out) both;
+}
+#adminDashboardSection.mv-screen-enter .cyber-page-heading{animation-delay:70ms;}
+#adminDashboardSection.mv-screen-enter .cyber-metrics{animation-delay:140ms;}
+#adminDashboardSection.mv-screen-enter #adminPanelHost{animation-delay:220ms;}
+@keyframes mvAdminEnter{from{opacity:0;transform:translate3d(0,18px,0);filter:blur(4px)}to{opacity:1;transform:translate3d(0,0,0);filter:blur(0)}}
+#adminDashboardSection .cyber-metric-card,
+#adminDashboardSection .cyber-panel,
+#adminDashboardSection .cyber-users-panel,
+#adminDashboardSection .admin-user-card,
+#adminDashboardSection .cyber-account-card,
+#adminDashboardSection .admin-memory-card,
+#adminDashboardSection .cyber-memory-card{
+  will-change:transform;
+}
+
+/* Scroll progress rail appears only after leaving the intro. */
+#mvMotionProgress{
+  position:fixed;top:0;left:0;z-index:10001;width:100%;height:2px;pointer-events:none;
+  transform:scaleX(0);transform-origin:left center;
+  background:linear-gradient(90deg,#39d8ff,#6c8cff,#a77bff);
+  box-shadow:0 0 12px rgba(63,191,255,.42);
+  opacity:0;transition:opacity .3s ease;
+}
+body.mv-has-scrolled #mvMotionProgress{opacity:.9;}
+body.cosmic-intro-active #mvMotionProgress{opacity:0;}
+@media (max-width:760px){
+  #cosmicIntro .mv-vault-stage{width:min(560px,105vw);height:clamp(235px,34vh,310px);}
+  #cosmicIntro .mv-vault-ring-back{width:58%;}
+  #cosmicIntro .mv-vault-ring-front{width:48%;}
+  #cosmicIntro .mv-vault-iris{width:39%;}
+  #cosmicIntro .cosmic-content{width:calc(100% - 28px);}
+  .mv-motion-item{filter:none;transform:translate3d(0,16px,0);}
+}
+@media (max-height:700px) and (min-width:761px){
+  #cosmicIntro .mv-vault-stage{height:clamp(215px,32vh,290px);width:min(560px,90vw);}
+  #cosmicIntro .cosmic-content{padding:12px 0;}
+}
+@media (prefers-reduced-motion:reduce){
+  #cosmicIntro::before,#cosmicIntro .mv-vault-stage,#cosmicIntro .cosmic-title,#cosmicIntro .cosmic-description,
+  #cosmicIntro .cosmic-eyebrow,#cosmicIntro .cosmic-enter-btn,#cosmicIntro .cosmic-footer,#cosmicIntro .cosmic-corner,
+  #dashboardSection.mv-screen-enter *,#adminDashboardSection.mv-screen-enter *{animation:none!important;}
+  .mv-motion-item{opacity:1!important;transform:none!important;filter:none!important;transition:none!important;}
+  .mv-motion-hover{transition:none!important;}
+  #mvMotionProgress{display:none;}
+}
+
+/* =====================================================
+   MEMORYVAULT — COSMIC BACKDROP, IMPLEMENTED
+   This file loads after style.css, so the final intro
+   composition lives here to avoid earlier rules winning.
+   ===================================================== */
+#cosmicIntro {
+  background-color: #020711;
+  background-image:
+    linear-gradient(180deg, rgba(2, 7, 17, .18), rgba(2, 7, 17, .42)),
+    url('/MemoryVault_Cosmic_Backdrop.svg');
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat;
+}
+#cosmicIntro::before {
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(0, 134, 220, .10), transparent 35%),
+    radial-gradient(ellipse at 50% 70%, rgba(58, 74, 174, .06), transparent 46%),
+    linear-gradient(90deg, rgba(1, 6, 15, .2), transparent 28%, transparent 72%, rgba(1, 6, 15, .22));
+  opacity: .78;
+  animation: mvAtmosphere 20s ease-in-out infinite alternate;
+}
+#cosmicIntro .mv-core-nebula { opacity: .11; filter: blur(74px); }
+#cosmicIntro .mv-core-nebula-a { background: #087ed5; }
+#cosmicIntro .mv-core-nebula-b { background: #5140a8; }
+#cosmicIntro .mv-core-grid { opacity: .08; }
+#cosmicIntro .mv-core-sweep { opacity: .025; animation-duration: 24s; }
+#cosmicIntro .mv-core-floor-line { opacity: .36; }
+#cosmicIntro .mv-core-environment::after { content: none !important; }
+#cosmicIntro .mv-scene-sequence { overflow: hidden; background: transparent; }
+#cosmicIntro .mv-scene-sequence::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse at 14% 32%, rgba(18, 115, 190, .12), transparent 23%),
+    radial-gradient(ellipse at 86% 70%, rgba(78, 64, 174, .10), transparent 25%),
+    radial-gradient(ellipse at 50% 50%, transparent 25%, rgba(1, 5, 14, .16) 100%);
+  animation: mvEdgeMist 24s ease-in-out infinite alternate;
+}
+#cosmicIntro .mv-scene-sequence::after {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: .22;
+  background-image:
+    radial-gradient(circle, rgba(169, 231, 255, .9) 0 1px, transparent 1.7px),
+    radial-gradient(circle, rgba(173, 159, 255, .7) 0 .8px, transparent 1.7px);
+  background-size: 181px 163px, 241px 219px;
+  background-position: 17px 31px, 91px 59px;
+  mask-image: radial-gradient(ellipse at center, transparent 0 27%, #000 78%);
+  animation: mvEdgeStars 110s linear infinite;
+}
+#cosmicIntro .mv-scene { z-index: 1; }
+#cosmicIntro .mv-scene-art {
+  border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible;
+  transform: perspective(900px) rotateY(8deg);
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, .24));
+}
+#cosmicIntro .mv-scene-art::before {
+  inset: 12%; border: 1px solid rgba(93, 199, 255, .12); border-radius: 50%; transform: rotate(-18deg) scaleX(1.18);
+}
+#cosmicIntro .mv-scene-art::after {
+  inset: 8%; border-radius: 50%;
+  background: linear-gradient(125deg, transparent 25%, rgba(77, 208, 255, .10) 48%, transparent 62%);
+}
+#cosmicIntro .mv-scene-art-capture b {
+  background: radial-gradient(circle at 34% 28%, #e8fcff, rgba(64, 189, 255, .72) 18%, rgba(38, 83, 255, .20) 58%, transparent 73%);
+  box-shadow: 0 0 28px rgba(58, 196, 255, .42), 0 0 76px rgba(58, 120, 255, .16);
+}
+#cosmicIntro .mv-scene-art-seal b {
+  border-radius: 13px; background: linear-gradient(145deg, rgba(77, 207, 255, .12), rgba(107, 83, 255, .06));
+  box-shadow: 0 0 28px rgba(49, 187, 255, .24), inset 0 0 24px rgba(65, 159, 255, .18);
+}
+#cosmicIntro .mv-scene-art-unlock b {
+  border-radius: 50% 50% 44% 44%; box-shadow: 0 0 34px rgba(76, 187, 255, .3), inset 0 0 26px rgba(76, 187, 255, .12);
+}
+#cosmicIntro .mv-scene-copy {
+  max-width: 285px; padding: 8px 0 8px 18px; border-left: 1px solid rgba(91, 207, 255, .18);
+  text-shadow: 0 3px 24px rgba(0, 0, 0, .8);
+}
+#cosmicIntro .mv-scene-copy span {
+  color: #8de5ff; font-size: 9px; letter-spacing: .22em; text-shadow: 0 0 18px rgba(53, 191, 255, .22);
+}
+#cosmicIntro .mv-scene-copy strong {
+  color: rgba(237, 247, 255, .94); font-size: clamp(16px, 1.6vw, 23px); line-height: 1.28;
+  font-weight: 650; text-wrap: balance;
+}
+#cosmicIntro .mv-scene-copy small { color: rgba(160, 197, 225, .62); line-height: 1.6; }
+#cosmicIntro .mv-scene-progress { bottom: 7%; opacity: .65; }
+@keyframes mvEdgeMist { from { opacity: .55; transform: scale(1); } to { opacity: .95; transform: scale(1.035); } }
+@keyframes mvEdgeStars { from { background-position: 17px 31px, 91px 59px; } to { background-position: 198px 194px, -150px 278px; } }
+@media (max-width: 900px) {
+  #cosmicIntro .mv-scene-art { max-height: 155px; }
+  #cosmicIntro .mv-scene-copy { border-left: 0; padding-left: 0; }
+}
+@media (max-width: 600px) {
+  #cosmicIntro .mv-scene-sequence::before, #cosmicIntro .mv-scene-sequence::after { opacity: .24; }
+  #cosmicIntro .mv-scene-art { width: min(150px, 42vw); max-height: 115px; }
+  #cosmicIntro .mv-scene-copy { text-align: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #cosmicIntro .mv-scene-sequence::before, #cosmicIntro .mv-scene-sequence::after { animation: none !important; }
+}
