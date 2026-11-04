@@ -86,6 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const authTitle = document.getElementById("authTitle");
   const authDescription = document.getElementById("authDescription");
   const authMessage = document.getElementById("authMessage");
+  let lastModalTrigger = null;
 
   const dashboard = document.getElementById("dashboardSection");
   const userName = document.getElementById("dashboardUserName");
@@ -129,6 +130,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function openModal(mode = "login") {
+    if (modal.classList.contains("hidden")) {
+      lastModalTrigger = document.activeElement;
+    }
+
     modal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
     showAuthMessage("");
@@ -146,12 +151,21 @@ document.addEventListener("DOMContentLoaded", () => {
       authDescription.textContent =
         "Log in to access your personal MemoryVault.";
     }
+
+    const activeForm = mode === "register" ? registerForm : loginForm;
+    requestAnimationFrame(() => activeForm.querySelector("input")?.focus());
   }
 
-  function closeModal() {
+  function closeModal(restoreFocus = true) {
     modal.classList.add("hidden");
     document.body.style.overflow = "";
     showAuthMessage("");
+
+    if (restoreFocus && lastModalTrigger?.isConnected &&
+        lastModalTrigger.getClientRects().length > 0) {
+      lastModalTrigger.focus();
+    }
+    lastModalTrigger = null;
   }
 
   loginButtons.forEach((button) => {
@@ -170,7 +184,32 @@ document.addEventListener("DOMContentLoaded", () => {
     openModal("login");
   });
 
-  closeModalBtn.addEventListener("click", closeModal);
+  closeModalBtn.addEventListener("click", () => closeModal());
+
+  modal.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab") return;
+
+    const focusable = Array.from(modal.querySelectorAll(
+      'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+    )).filter((element) =>
+      !element.closest(".hidden") && element.getClientRects().length > 0
+    );
+
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
 
   modal.addEventListener("click", (event) => {
     if (event.target === modal) closeModal();
@@ -236,7 +275,7 @@ function showDashboard(user) {
     if (button) button.style.display = "none";
   });
 
-  closeModal();
+  closeModal(false);
 
   dashboard.scrollIntoView({
     behavior: "smooth",
@@ -311,7 +350,8 @@ if (replayIntroBtn) {
 
     await Promise.all([
   loadAdminUsers(),
-  loadAdminStats()
+  loadAdminStats(),
+  loadAdminFamilies()
 ]);
   } catch (error) {
     console.error("Could not open Admin Dashboard:", error);
@@ -486,6 +526,16 @@ async function loadAdminStats() {
     locked_memories: "adminLockedMemories",
     revealed_memories: "adminRevealedMemories"
   };
+  const familyStatIds = {
+    family_total_accounts: "adminFamilyTotalAccounts",
+    family_verified_accounts: "adminFamilyVerifiedAccounts",
+    family_unverified_accounts: "adminFamilyUnverifiedAccounts",
+    family_total_members: "adminFamilyTotalMembers",
+    family_total_memories: "adminFamilyTotalMemories",
+    family_total_attachments: "adminFamilyTotalAttachments",
+    family_locked_memories: "adminFamilyLockedMemories",
+    family_revealed_memories: "adminFamilyRevealedMemories"
+  };
 
   try {
     const result = await requestJSON("/api/admin/stats");
@@ -499,10 +549,344 @@ async function loadAdminStats() {
         element.textContent = stats[key] ?? "0";
       }
     });
+    Object.entries(familyStatIds).forEach(([key, id]) => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = stats[key] ?? "0";
+    });
   } catch (error) {
     console.error("Could not load admin statistics:", error);
   }
 }
+
+let adminFamiliesPage = 1;
+const ADMIN_FAMILIES_PER_PAGE = 8;
+let adminSelectedFamilyId = null;
+
+function formatFamilyAdminDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Unavailable" : date.toLocaleString();
+}
+
+async function loadAdminFamilies() {
+  const list = document.getElementById("adminFamiliesList");
+  const pagination = document.getElementById("adminFamiliesPagination");
+  const resultCount = document.getElementById("adminFamilyResultCount");
+  const search = document.getElementById("adminFamilySearch");
+  if (!list) return;
+
+  list.classList.remove("has-error");
+  list.textContent = "Loading family accounts...";
+  if (resultCount) resultCount.textContent = "Loading family accounts...";
+
+  try {
+    const params = new URLSearchParams({
+      page: String(adminFamiliesPage),
+      pageSize: String(ADMIN_FAMILIES_PER_PAGE),
+      search: search?.value.trim() || ""
+    });
+    const result = await requestJSON(`/api/admin/families?${params}`);
+    const families = Array.isArray(result.families) ? result.families : [];
+    const total = Number(result.total) || 0;
+    const totalPages = Math.max(1, Math.ceil(total / ADMIN_FAMILIES_PER_PAGE));
+    if (adminFamiliesPage > totalPages) {
+      adminFamiliesPage = totalPages;
+      return loadAdminFamilies();
+    }
+    adminFamiliesPage = Math.min(Math.max(1, adminFamiliesPage), totalPages);
+
+    if (resultCount) {
+      resultCount.textContent = `${total} ${total === 1 ? "family" : "families"}`;
+    }
+    list.replaceChildren();
+
+    if (!families.length) {
+      const empty = document.createElement("p");
+      empty.className = "family-admin-empty";
+      empty.textContent = search?.value.trim()
+        ? "No family accounts match your search."
+        : "No FamilyVault accounts found.";
+      list.appendChild(empty);
+      if (pagination) pagination.replaceChildren();
+      return;
+    }
+
+    families.forEach((family) => {
+      const card = document.createElement("article");
+      card.className = "family-admin-card";
+
+      const heading = document.createElement("div");
+      heading.className = "family-admin-card-heading";
+      const name = document.createElement("h3");
+      name.textContent = family.family_name || "Unnamed family";
+      const status = document.createElement("span");
+      status.className = `family-admin-status ${family.email_verified ? "is-verified" : "is-unverified"}`;
+      status.textContent = family.email_verified ? "Verified" : "Unverified";
+      heading.append(name, status);
+
+      const details = document.createElement("dl");
+      details.className = "family-admin-card-details";
+      [
+        ["Owner", family.owner_name],
+        ["Username", `@${family.owner_username || ""}`],
+        ["Email", family.owner_email],
+        ["Members", family.member_count],
+        ["Memories", family.memory_count],
+        ["Created", formatFamilyAdminDate(family.created_at)]
+      ].forEach(([label, value]) => {
+        const row = document.createElement("div");
+        const term = document.createElement("dt");
+        term.textContent = label;
+        const description = document.createElement("dd");
+        description.textContent = String(value ?? "—");
+        row.append(term, description);
+        details.appendChild(row);
+      });
+
+      const actions = document.createElement("div");
+      actions.className = "family-admin-actions";
+      const openButton = document.createElement("button");
+      openButton.type = "button";
+      openButton.className = "family-admin-primary";
+      openButton.textContent = "Open Family";
+      openButton.addEventListener("click", () => loadAdminFamilyDetails(family.id));
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "family-admin-danger";
+      deleteButton.textContent = "Delete Family";
+      deleteButton.addEventListener("click", () => deleteAdminFamily(family.id, family.family_name));
+      actions.append(openButton, deleteButton);
+      card.append(heading, details, actions);
+      list.appendChild(card);
+    });
+
+    if (pagination) {
+      pagination.replaceChildren();
+      const previous = document.createElement("button");
+      previous.type = "button";
+      previous.className = "btn btn-secondary";
+      previous.textContent = "Previous";
+      previous.disabled = adminFamiliesPage === 1;
+      previous.addEventListener("click", () => {
+        if (adminFamiliesPage > 1) {
+          adminFamiliesPage--;
+          loadAdminFamilies();
+        }
+      });
+      const label = document.createElement("span");
+      label.textContent = `Page ${adminFamiliesPage} of ${totalPages}`;
+      const next = document.createElement("button");
+      next.type = "button";
+      next.className = "btn btn-secondary";
+      next.textContent = "Next";
+      next.disabled = adminFamiliesPage === totalPages;
+      next.addEventListener("click", () => {
+        if (adminFamiliesPage < totalPages) {
+          adminFamiliesPage++;
+          loadAdminFamilies();
+        }
+      });
+      pagination.append(previous, label, next);
+    }
+  } catch (error) {
+    list.textContent = error.message || "Could not load family accounts.";
+    list.classList.add("has-error");
+    if (pagination) pagination.replaceChildren();
+    if (resultCount) resultCount.textContent = "Family directory unavailable";
+  }
+}
+
+async function loadAdminFamilyDetails(familyId) {
+  const panel = document.getElementById("adminFamilyDetails");
+  const title = document.getElementById("adminFamilyDetailsTitle");
+  const content = document.getElementById("adminFamilyDetailsContent");
+  const deleteButton = document.getElementById("adminDeleteFamilyBtn");
+  if (!panel || !title || !content) return;
+
+  adminSelectedFamilyId = familyId;
+  panel.classList.remove("hidden");
+  title.textContent = "Loading family...";
+  content.textContent = "Loading family members and shared memories...";
+  try {
+    const result = await requestJSON(`/api/admin/families/${familyId}`);
+    const { family, members = [], memories = [] } = result;
+    if (!family) throw new Error("The server returned no family details.");
+    title.textContent = family.family_name || "Family details";
+    if (deleteButton) {
+      deleteButton.onclick = () => deleteAdminFamily(family.id, family.family_name);
+    }
+    content.replaceChildren();
+
+    const ownerSection = document.createElement("section");
+    ownerSection.className = "family-admin-owner";
+    const ownerHeading = document.createElement("h4");
+    ownerHeading.textContent = "Family owner";
+    const ownerInfo = document.createElement("p");
+    ownerInfo.textContent = `${family.owner_name} (@${family.owner_username}) · ${family.owner_email}`;
+    const ownerStatus = document.createElement("span");
+    ownerStatus.className = `family-admin-status ${family.email_verified ? "is-verified" : "is-unverified"}`;
+    ownerStatus.textContent = family.email_verified ? "Email verified" : "Email unverified";
+    const ownerCreated = document.createElement("p");
+    ownerCreated.textContent = `Family created: ${formatFamilyAdminDate(family.created_at)}`;
+    ownerSection.append(ownerHeading, ownerInfo, ownerStatus, ownerCreated);
+
+    const membersSection = document.createElement("section");
+    membersSection.className = "family-admin-inspector-section";
+    const membersHeading = document.createElement("h4");
+    membersHeading.textContent = `Family members (${members.length})`;
+    membersSection.appendChild(membersHeading);
+    if (!members.length) {
+      const empty = document.createElement("p");
+      empty.className = "family-admin-empty";
+      empty.textContent = "No family members have been added.";
+      membersSection.appendChild(empty);
+    }
+    members.forEach((member) => {
+      const row = document.createElement("article");
+      row.className = "family-admin-member-row";
+      const identity = document.createElement("div");
+      const memberName = document.createElement("strong");
+      memberName.textContent = member.name;
+      const username = document.createElement("span");
+      username.textContent = `@${member.username}`;
+      identity.append(memberName, username);
+      const memberStatus = document.createElement("span");
+      memberStatus.className = `family-admin-status ${member.status === "active" ? "is-active" : "is-disabled"}`;
+      memberStatus.textContent = member.status === "active" ? "Active" : "Disabled";
+      const memberCreated = document.createElement("small");
+      memberCreated.textContent = `Added ${formatFamilyAdminDate(member.created_at)}`;
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.className = "family-admin-danger";
+      removeButton.textContent = "Delete member";
+      removeButton.addEventListener("click", () => deleteAdminFamilyMember(family.id, member));
+      row.append(identity, memberStatus, memberCreated, removeButton);
+      membersSection.appendChild(row);
+    });
+
+    const memoriesSection = document.createElement("section");
+    memoriesSection.className = "family-admin-inspector-section";
+    const memoriesHeading = document.createElement("h4");
+    memoriesHeading.textContent = `Shared memories (${memories.length})`;
+    memoriesSection.appendChild(memoriesHeading);
+    if (!memories.length) {
+      const empty = document.createElement("p");
+      empty.className = "family-admin-empty";
+      empty.textContent = "This family has no shared memories.";
+      memoriesSection.appendChild(empty);
+    }
+    memories.forEach((memory) => {
+      const card = document.createElement("article");
+      card.className = "family-admin-memory";
+      const memoryHeading = document.createElement("div");
+      memoryHeading.className = "family-admin-memory-heading";
+      const memoryTitle = document.createElement("h5");
+      memoryTitle.textContent = memory.title || "Untitled memory";
+      const revealTime = Date.parse(memory.reveal_at);
+      const isLocked = Number.isFinite(revealTime) && revealTime > Date.now();
+      const memoryStatus = document.createElement("span");
+      memoryStatus.className = `family-admin-status ${isLocked ? "is-unverified" : "is-verified"}`;
+      memoryStatus.textContent = isLocked ? "Locked · admin inspection" : "Revealed";
+      memoryHeading.append(memoryTitle, memoryStatus);
+
+      const metadata = document.createElement("p");
+      metadata.className = "family-admin-memory-meta";
+      metadata.textContent = `${memory.category || "Family"} · Reveal: ${formatFamilyAdminDate(memory.reveal_at)} · Created: ${formatFamilyAdminDate(memory.created_at)}`;
+      const message = document.createElement("p");
+      message.className = "family-admin-memory-message";
+      message.textContent = memory.message || "No message.";
+      const attachments = document.createElement("div");
+      attachments.className = "family-admin-attachments";
+      const media = Array.isArray(memory.media) ? memory.media : [];
+      const attachmentHeading = document.createElement("h6");
+      attachmentHeading.textContent = `Attachments (${media.length})`;
+      attachments.appendChild(attachmentHeading);
+      if (!media.length) {
+        const noMedia = document.createElement("p");
+        noMedia.textContent = "No attachments.";
+        attachments.appendChild(noMedia);
+      }
+      media.forEach((attachment) => {
+        const item = document.createElement("div");
+        item.className = "family-admin-attachment-row";
+        const label = document.createElement("span");
+        label.textContent = `${attachment.original_name} · ${attachment.media_type} (${attachment.mime_type})`;
+        const preview = document.createElement("button");
+        preview.type = "button";
+        preview.className = "family-admin-primary";
+        preview.textContent = "Preview";
+        preview.addEventListener("click", async () => {
+          preview.disabled = true;
+          try {
+            const access = await requestJSON(`/api/admin/family-attachments/${attachment.id}/access`);
+            openAdminMediaViewer({
+              url: access.url,
+              name: access.name,
+              type: access.type,
+              mimeType: access.mimeType,
+              size: access.size
+            });
+          } catch (error) {
+            window.alert(error.message || "Unable to preview this family attachment.");
+          } finally {
+            preview.disabled = false;
+          }
+        });
+        item.append(label, preview);
+        attachments.appendChild(item);
+      });
+
+      const deleteMemory = document.createElement("button");
+      deleteMemory.type = "button";
+      deleteMemory.className = "family-admin-danger";
+      deleteMemory.textContent = "Delete memory";
+      deleteMemory.addEventListener("click", () => deleteAdminFamilyMemory(family.id, memory));
+      card.append(memoryHeading, metadata, message, attachments, deleteMemory);
+      memoriesSection.appendChild(card);
+    });
+    content.append(ownerSection, membersSection, memoriesSection);
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (error) {
+    title.textContent = "Family details unavailable";
+    content.textContent = error.message || "Could not load this family.";
+  }
+}
+
+async function deleteAdminFamilyMember(familyId, member) {
+  if (!window.confirm(`Delete family member "${member.name}" (@${member.username})? Other members, memories and the family account will be preserved.`)) return;
+  try {
+    await requestJSON(`/api/admin/families/${familyId}/members/${member.id}`, { method: "DELETE" });
+    await Promise.all([loadAdminFamilyDetails(familyId), loadAdminStats()]);
+  } catch (error) {
+    window.alert(`Member deletion failed: ${error.message}`);
+  }
+}
+
+async function deleteAdminFamilyMemory(familyId, memory) {
+  if (!window.confirm(`Delete the shared memory "${memory.title}" and its attachments? This cannot be undone.`)) return;
+  try {
+    await requestJSON(`/api/admin/families/${familyId}/memories/${memory.id}`, { method: "DELETE" });
+    await Promise.all([loadAdminFamilyDetails(familyId), loadAdminStats()]);
+  } catch (error) {
+    window.alert(`Memory deletion failed: ${error.message}`);
+  }
+}
+
+async function deleteAdminFamily(familyId, familyName) {
+  if (!window.confirm(`Permanently delete the FamilyVault account "${familyName}", all members, memories and stored attachments? Personal MemoryVault accounts and data will not be affected.`)) return;
+  const confirmation = window.prompt(`Type the family name exactly to confirm deletion:\n${familyName}`);
+  if (confirmation !== familyName) return;
+  try {
+    await requestJSON(`/api/admin/families/${familyId}`, { method: "DELETE" });
+    if (adminSelectedFamilyId === familyId) {
+      adminSelectedFamilyId = null;
+      document.getElementById("adminFamilyDetails")?.classList.add("hidden");
+    }
+    await Promise.all([loadAdminFamilies(), loadAdminStats()]);
+  } catch (error) {
+    window.alert(`Family deletion failed: ${error.message}`);
+  }
+}
+
 let adminUsersPage = 1;
 const ADMIN_USERS_PER_PAGE = 5;
 
@@ -1660,6 +2044,22 @@ const refreshAdminUsersBtn = document.getElementById("refreshAdminUsersBtn");
 if (refreshAdminUsersBtn) {
   refreshAdminUsersBtn.addEventListener("click", () => {
     loadAdminUsers();
+  });
+}
+
+const refreshAdminFamiliesBtn = document.getElementById("refreshAdminFamiliesBtn");
+if (refreshAdminFamiliesBtn) {
+  refreshAdminFamiliesBtn.addEventListener("click", () => {
+    loadAdminFamilies();
+    loadAdminStats();
+  });
+}
+
+const adminFamilySearch = document.getElementById("adminFamilySearch");
+if (adminFamilySearch) {
+  adminFamilySearch.addEventListener("input", () => {
+    adminFamiliesPage = 1;
+    loadAdminFamilies();
   });
 }
 

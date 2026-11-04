@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#11110f">
+  <title>FamilyVault | MemoryVault</title>
+  <link rel="stylesheet" href="/family.css">
+  <link rel="stylesheet" href="/design-system.css">
+</head>
+<body class="familyvault-page">
+  <main class="shell family-app-shell">
+    <section id="authView" class="family-auth-screen">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="MemoryVault home"><span class="brand-mark">✦</span><span>Memory<span>Vault</span></span><span class="brand-divider"></span><span class="family-brand-name">FamilyVault</span></a>
+        <a class="back-link" href="/">← Personal MemoryVault</a>
+      </header>
+
+      <section class="hero family-auth-hero">
+        <div class="eyebrow">A SHARED SPACE FOR YOUR PEOPLE</div>
+        <h1>Some memories are <em>better together.</em></h1>
+        <p>Create a private family space where three accounts can preserve moments and unlock them in the future.</p>
+        <div class="family-auth-art" aria-hidden="true">
+          <img src="/FamilyVault_Memory_Illustration.svg" alt="" width="620" height="420">
+        </div>
+      </section>
+
+      <section class="auth-layout">
+        <aside class="auth-side-note">
+          <span class="auth-side-mark" aria-hidden="true">✦</span>
+          <p class="eyebrow">A SMALLER, CLOSER CIRCLE</p>
+          <h2>One family.<br><em>Three ways in.</em></h2>
+          <p>One owner creates your private space. Two family members join with their own accounts. Every memory belongs to your shared story.</p>
+          <div class="auth-side-roles">
+            <div><span>01</span><strong>Family owner</strong><small>Creates and looks after your space</small></div>
+            <div><span>02</span><strong>Two members</strong><small>Personal sign-ins for your people</small></div>
+          </div>
+          <div class="family-auth-orbit" aria-hidden="true">
+            <span class="orbit-center">✦</span><span class="orbit-person orbit-person-one">01</span><span class="orbit-person orbit-person-two">02</span><span class="orbit-person orbit-person-three">03</span>
+          </div>
+        </aside>
+
+        <section class="panel family-auth-panel">
+        <div class="tabs" role="tablist" aria-label="FamilyVault account access">
+          <button class="tab active" id="loginTab" type="button" role="tab" aria-selected="true" aria-controls="familyLoginForm">Family login</button>
+          <button class="tab" id="registerTab" type="button" role="tab" aria-selected="false" aria-controls="familyRegisterForm">Create a family account</button>
+        </div>
+        <form id="familyLoginForm" class="form family-login-form" role="tabpanel" aria-labelledby="loginTab">
+          <div class="form-intro">
+            <p class="eyebrow">WELCOME HOME</p>
+            <h2>Pick up where you left off.</h2>
+            <p class="muted">Sign in with your family username.</p>
+          </div>
+          <label>Username<input name="username" autocomplete="username" autocapitalize="none" required></label>
+          <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+          <button class="primary" type="submit">Enter FamilyVault</button>
+        </form>
+        <form id="familyRegisterForm" class="form hidden" role="tabpanel" aria-labelledby="registerTab" aria-hidden="true">
+          <div class="form-intro">
+            <p class="eyebrow">START YOUR SHARED ARCHIVE</p>
+            <h2>Create a space for your family.</h2>
+            <p class="muted">The owner verifies one email address. Family members use their own usernames and passwords.</p>
+          </div>
+          <div class="owner-registration-label"><span>01</span><strong>Family owner details</strong></div>
+          <label>Family name<input name="familyName" maxlength="100" placeholder="The Kukreti Family" required></label>
+          <label>Owner's full name<input name="ownerName" maxlength="80" required></label>
+          <label>Owner username<input name="username" minlength="3" maxlength="30" autocomplete="username" required></label>
+          <label>Owner email<input name="email" type="email" autocomplete="email" required></label>
+          <label>Password<input name="password" type="password" minlength="8" autocomplete="new-password" required></label>
+          <button class="primary" type="submit">Create family account</button>
+          <p class="hint">After registration, verify the email before logging in. Check Spam or Junk too.</p>
+        </form>
+        <p id="authMessage" class="message" role="status" aria-live="polite"></p>
+      </section>
+      </section>
+    </section>
+
+    <section id="dashboardView" class="hidden">
+      <header class="family-dashboard-nav">
+        <a class="brand" href="/" aria-label="MemoryVault home"><span class="brand-mark">✦</span><span>Memory<span>Vault</span></span><span class="brand-divider"></span><span class="family-brand-name">FamilyVault</span></a>
+        <div class="family-dashboard-identity">
+          <span class="identity-indicator" aria-hidden="true"></span>
+          <p id="welcomeText" class="muted"></p>
+          <button id="logoutBtn" class="secondary" type="button"><span aria-hidden="true">↗</span> Log out</button>
+        </div>
+      </header>
+      <p id="dashboardMessage" class="message dashboard-message" role="status" aria-live="polite"></p>
+
+      <section class="family-dashboard-hero">
+        <div class="family-dashboard-hero-copy">
+          <p class="eyebrow">A PRIVATE PLACE FOR YOUR PEOPLE</p>
+          <h1 id="familyTitle">FamilyVault</h1>
+          <p class="family-hero-description">The stories you share today become the memories you return to tomorrow.</p>
+          <a class="family-hero-link" href="#familyMemories">Explore your family memories <span aria-hidden="true">↓</span></a>
+        </div>
+        <div class="family-dashboard-art" aria-hidden="true">
+          <img src="/FamilyVault_Dashboard_Illustration.svg" alt="" width="620" height="420">
+          <span class="art-caption">KEPT CLOSE, THROUGH TIME</span>
+        </div>
+      </section>
+
+      <section class="family-activity panel" aria-labelledby="familyActivityTitle">
+        <div class="activity-intro">
+          <p class="eyebrow">THE STORY SO FAR</p>
+          <h2 id="familyActivityTitle">A little more, every day.</h2>
+          <p class="muted">Shared moments, gathered in one place.</p>
+        </div>
+        <div class="activity-stats" aria-label="Family memory overview">
+          <div><strong id="familyMemoryCount">0</strong><span>shared memories</span></div>
+          <div><strong id="familyLockedCount">0</strong><span>waiting to open</span></div>
+          <div><strong id="familyRevealedCount">0</strong><span>ready to revisit</span></div>
+        </div>
+        <ol id="familyActivityTimeline" class="family-activity-timeline" aria-label="Recent family memory activity"></ol>
+      </section>
+
+      <section id="memberSetup" class="panel member-setup-panel hidden">
+        <div class="section-kicker"><span>01</span><span class="eyebrow">MAKE ROOM FOR YOUR PEOPLE</span></div>
+        <h2>Create two family member accounts</h2>
+        <p class="muted">Give each person their own username and password. You can create these accounts once.</p>
+        <form id="membersForm" class="form">
+          <div class="member-grid">
+            <fieldset><legend><span>01</span> Family member one</legend><label>Name<input name="name1" autocomplete="name" required></label><label>Username<input name="username1" minlength="3" maxlength="30" autocomplete="username" required></label><label>Password<input name="password1" type="password" minlength="8" autocomplete="new-password" required></label></fieldset>
+            <fieldset><legend><span>02</span> Family member two</legend><label>Name<input name="name2" autocomplete="name" required></label><label>Username<input name="username2" minlength="3" maxlength="30" autocomplete="username" required></label><label>Password<input name="password2" type="password" minlength="8" autocomplete="new-password" required></label></fieldset>
+          </div>
+          <button class="primary" type="submit"><span aria-hidden="true">✦</span> Create both member accounts</button>
+          <p id="memberFormMessage" class="message" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="panel family-people-panel">
+        <div class="section-heading">
+          <div><p class="eyebrow">THE PEOPLE IN YOUR STORY</p><h2>Made better together</h2></div>
+          <span class="section-aside-note">Your family, in one place</span>
+        </div>
+        <div id="membersList" class="members-list"></div>
+      </section>
+
+      <section class="panel family-create-panel">
+        <div class="create-memory-intro">
+          <div class="section-kicker"><span>✦</span><span class="eyebrow">PRESERVE A MOMENT</span></div>
+          <h2>Leave a little something for later.</h2>
+          <p class="muted">Write down the moment. Choose when your family will open it.</p>
+        </div>
+        <form id="memoryForm" class="form family-memory-form">
+          <label class="memory-title-field">Memory title<input name="title" maxlength="160" placeholder="A day we'll always remember" required></label>
+          <label class="memory-message-field">The story<textarea name="message" rows="4" placeholder="What happened? What would you like your family to remember?" required></textarea></label>
+          <div class="memory-schedule-grid">
+            <label>Reveal date and time<input name="revealAt" type="datetime-local" required></label>
+            <label>Category<input name="category" value="Family" maxlength="60"></label>
+          </div>
+          <label class="memory-upload-field">Add photos, videos or audio <span class="upload-hint">Up to 5 files · 25 MB each</span><input name="media" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/ogg,audio/webm" multiple></label>
+          <button class="primary memory-save-button" type="submit"><span aria-hidden="true">✦</span> Save this family memory</button>
+          <p id="memoryFormMessage" class="message" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section id="familyMemories" class="family-archive-section">
+        <div class="archive-heading">
+          <div><p class="eyebrow">A COLLECTION OF YOUR MOMENTS</p><h2>Family memories</h2><p>Some are ready to revisit. Others are waiting for their time.</p></div>
+          <span class="archive-emblem" aria-hidden="true">✦</span>
+        </div>
+        <div id="memoriesList" class="memory-list"></div>
+      </section>
+    </section>
+    <footer class="family-footer">Personal vaults stay personal. FamilyVault is a separate shared space.</footer>
+  </main>
+  <script src="/family.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,1676 @@
+:root {
+  color-scheme: dark;
+  --mv-night: #080b12;
+  --mv-charcoal: #11151d;
+  --mv-surface: #151a23;
+  --mv-surface-raised: #1b2029;
+  --mv-line: rgba(224, 214, 194, 0.13);
+  --mv-line-strong: rgba(224, 214, 194, 0.24);
+  --mv-ivory: #f2eee7;
+  --mv-muted-ivory: #b7b2aa;
+  --mv-champagne: #e0bd88;
+  --mv-amber: #bc8e5e;
+  --mv-violet: #aaa1e8;
+  --mv-cyan: #91c8cc;
+  --mv-focus: #f0c98e;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body.memoryvault-page,
+body.familyvault-page {
+  color: var(--mv-ivory);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+body.memoryvault-page {
+  background:
+    radial-gradient(ellipse at 9% 9%, rgba(97, 88, 132, 0.12), transparent 34rem),
+    radial-gradient(ellipse at 94% 58%, rgba(132, 103, 70, 0.08), transparent 40rem),
+    var(--mv-night);
+}
+
+body.familyvault-page {
+  background:
+    radial-gradient(ellipse at 8% 7%, rgba(153, 111, 63, 0.12), transparent 34rem),
+    radial-gradient(ellipse at 91% 46%, rgba(129, 114, 173, 0.11), transparent 39rem),
+    linear-gradient(155deg, #11110f 0%, #0c0e13 60%, #111018 100%);
+}
+
+.memoryvault-page :where(a, button, input, select, textarea):focus-visible,
+.familyvault-page :where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--mv-focus);
+  outline-offset: 3px;
+}
+
+.memoryvault-page button,
+.familyvault-page button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.memoryvault-page :where(button, .btn),
+.familyvault-page :where(button, .primary, .secondary, .tab) {
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+/* Personal landing and cinematic introduction */
+.memoryvault-page .navbar {
+  position: sticky;
+  top: 0;
+  min-height: 74px;
+  border-bottom: 1px solid rgba(224, 214, 194, 0.1);
+  background: rgba(8, 11, 18, 0.84);
+  backdrop-filter: blur(18px);
+}
+
+.memoryvault-page .brand {
+  color: var(--mv-ivory);
+  letter-spacing: -0.035em;
+}
+
+.memoryvault-page .nav-links {
+  gap: clamp(14px, 2.4vw, 29px);
+}
+
+.memoryvault-page .nav-links a {
+  color: #bdb8ae;
+  font-size: 13px;
+}
+
+.memoryvault-page .nav-links .family-nav-link {
+  color: var(--mv-champagne);
+}
+
+.memoryvault-page .nav-login {
+  border-color: var(--mv-line-strong);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.memoryvault-page .hero {
+  position: relative;
+  display: grid;
+  width: min(1440px, 100%);
+  min-height: min(770px, calc(100svh - 74px));
+  grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
+  align-items: center;
+  justify-content: stretch;
+  gap: clamp(26px, 5vw, 78px);
+  margin: 0 auto;
+  padding: clamp(58px, 8vw, 116px) clamp(28px, 6vw, 88px);
+  text-align: left;
+}
+
+.memoryvault-page .hero::after {
+  display: none;
+}
+
+.memoryvault-page .hero-content {
+  width: 100%;
+  max-width: 650px;
+  text-align: left;
+}
+
+.memoryvault-page .hero-badge {
+  margin-bottom: 23px;
+  border-color: rgba(222, 193, 148, 0.2);
+  border-radius: 7px;
+  background: rgba(218, 183, 128, 0.06);
+  color: #d3cbbb;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.memoryvault-page .hero-badge .status-dot {
+  background: #d6b77f;
+  box-shadow: 0 0 12px rgba(214, 183, 127, 0.54);
+}
+
+.memoryvault-page .hero-title {
+  max-width: 690px;
+  font-size: clamp(52px, 7.3vw, 94px);
+  line-height: 0.99;
+  letter-spacing: -0.075em;
+}
+
+.memoryvault-page .hero-title span {
+  color: #c9c4ba;
+}
+
+.memoryvault-page .hero-title .hero-title-accent {
+  color: var(--mv-champagne);
+}
+
+.memoryvault-page .hero-description {
+  max-width: 550px;
+  margin: 24px 0 0;
+  color: #b7b2aa;
+  font-size: clamp(15px, 1.35vw, 18px);
+  line-height: 1.8;
+}
+
+.memoryvault-page .hero-actions {
+  justify-content: flex-start;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.memoryvault-page .btn-primary,
+.memoryvault-page .cosmic-enter-btn {
+  border: 1px solid rgba(246, 216, 171, 0.42);
+  background: linear-gradient(115deg, #b88a5b, #9b795a 58%, #8274a8);
+  box-shadow: 0 12px 30px rgba(102, 75, 58, 0.2), inset 0 1px rgba(255,255,255,.15);
+  color: #fff8ed;
+}
+
+.memoryvault-page .btn-primary:hover,
+.memoryvault-page .cosmic-enter-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(246, 216, 171, 0.7);
+  box-shadow: 0 16px 34px rgba(102, 75, 58, 0.29), inset 0 1px rgba(255,255,255,.17);
+}
+
+.memoryvault-page .btn-secondary {
+  border-color: rgba(205, 198, 185, 0.2);
+  background: rgba(255, 255, 255, 0.035);
+  color: #d4d0c8;
+}
+
+.memoryvault-page .hero-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 22px;
+  color: #a69f93;
+  font-size: 11px;
+  letter-spacing: 0.045em;
+}
+
+.memoryvault-page .hero-note span {
+  color: var(--mv-amber);
+}
+
+.hero-art {
+  position: relative;
+  width: min(100%, 590px);
+  justify-self: end;
+  isolation: isolate;
+}
+
+.hero-art::before {
+  position: absolute;
+  z-index: -1;
+  inset: 12% 6%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(204, 160, 101, 0.16), rgba(114, 105, 163, 0.08) 45%, transparent 74%);
+  content: "";
+  filter: blur(25px);
+}
+
+.hero-art img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 26px 34px rgba(0, 0, 0, 0.33));
+}
+
+.hero-art-caption {
+  position: absolute;
+  right: 12%;
+  bottom: 8%;
+  color: rgba(235, 211, 176, 0.66);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.19em;
+}
+
+.memoryvault-page .section {
+  width: min(1180px, calc(100% - 48px));
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.memoryvault-page .section-heading h2,
+.memoryvault-page .cta-content h2 {
+  color: #f0ece4;
+  letter-spacing: -0.055em;
+}
+
+.memoryvault-page .section-heading h2 span,
+.memoryvault-page .cta-content h2 span {
+  color: var(--mv-champagne);
+}
+
+.memoryvault-page .step-card,
+.memoryvault-page .feature-card {
+  border-color: var(--mv-line);
+  background: linear-gradient(145deg, rgba(24, 28, 36, 0.87), rgba(15, 18, 25, 0.96));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.16);
+}
+
+.memoryvault-page .step-number,
+.memoryvault-page .section-label {
+  color: var(--mv-champagne);
+}
+
+.memoryvault-page .feature-icon {
+  color: var(--mv-violet);
+}
+
+.memoryvault-page .memory-preview .memory-card {
+  border-color: rgba(220, 189, 140, 0.24);
+  background:
+    linear-gradient(145deg, rgba(35, 33, 34, 0.96), rgba(15, 18, 24, 0.98));
+}
+
+.memoryvault-page .footer {
+  border-top: 1px solid var(--mv-line);
+  background: rgba(4, 6, 10, 0.4);
+}
+
+.cosmic-family-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 17px;
+  color: #d9c6a6;
+  font-size: 12px;
+  text-decoration: none;
+  transition: color 160ms ease, gap 160ms ease;
+}
+
+.cosmic-family-link:hover {
+  gap: 12px;
+  color: #f5dfb9;
+}
+
+.memoryvault-page #cosmicIntro .mv-scene {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  padding-left: clamp(18px, 5vw, 72px);
+}
+
+.memoryvault-page #cosmicIntro .mv-scene-copy {
+  display: none;
+}
+
+.memoryvault-page #cosmicIntro .mv-scene-art {
+  width: clamp(130px, 19vw, 230px);
+  max-height: 190px;
+  margin-left: clamp(0px, 3vw, 42px);
+  opacity: 0.16;
+  filter: blur(0.3px);
+}
+
+/* Shared dark surfaces and restrained champagne / violet detailing */
+.memoryvault-page #dashboardSection .dashboard-header,
+.memoryvault-page #dashboardSection .dashboard-stat,
+.memoryvault-page #dashboardSection .memory-create-card,
+.memoryvault-page #dashboardSection .vault-archive-panel,
+.memoryvault-page #adminDashboardSection .cyber-main,
+.memoryvault-page #adminDashboardSection .cyber-panel,
+.memoryvault-page #adminDashboardSection .cyber-users-panel {
+  border-color: var(--mv-line);
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(178, 143, 97, 0.055), transparent 44%),
+    linear-gradient(145deg, rgba(22, 25, 32, 0.97), rgba(13, 16, 22, 0.99));
+  box-shadow: 0 20px 58px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255,255,255,.025);
+}
+
+.memoryvault-page #dashboardSection .vault-system-bar {
+  border-color: var(--mv-line);
+  background: rgba(10, 12, 17, 0.88);
+}
+
+.memoryvault-page #dashboardSection .vault-nav {
+  border-color: rgba(224, 214, 194, 0.11);
+  background: rgba(17, 20, 26, 0.85);
+}
+
+.memoryvault-page #dashboardSection .vault-nav a[aria-current="location"],
+.memoryvault-page #dashboardSection .vault-nav a.active {
+  border-color: rgba(224, 189, 136, 0.28);
+  background: rgba(192, 151, 100, 0.11);
+  color: #efd5ae;
+}
+
+.memoryvault-page #dashboardSection .dashboard-header h1,
+.memoryvault-page #dashboardSection .memory-create-card h2,
+.memoryvault-page #dashboardSection .vault-archive-panel h2 {
+  color: var(--mv-ivory);
+}
+
+.memoryvault-page #dashboardSection .dashboard-header .dashboard-eyebrow,
+.memoryvault-page #dashboardSection .memory-card .memory-category {
+  color: var(--mv-champagne);
+}
+
+.memoryvault-page #dashboardSection .dashboard-stat span {
+  color: var(--mv-champagne);
+  text-shadow: 0 0 22px rgba(224, 189, 136, 0.13);
+}
+
+.memoryvault-page #dashboardSection .dashboard-workspace {
+  grid-template-columns: minmax(285px, 0.78fr) minmax(0, 1.42fr);
+  gap: clamp(16px, 2.2vw, 30px);
+}
+
+.memoryvault-page #dashboardSection .vault-archive-panel .memories-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 14px;
+}
+
+.memoryvault-page #dashboardSection .memory-card {
+  border-color: rgba(224, 214, 194, 0.15);
+  border-radius: 17px;
+  background: linear-gradient(145deg, rgba(28, 31, 38, 0.97), rgba(15, 18, 24, 0.99));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+
+.memoryvault-page #dashboardSection .memory-card:hover {
+  border-color: rgba(224, 189, 136, 0.31);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+.memoryvault-page #dashboardSection .memory-card .memory-status.locked {
+  border-color: rgba(170, 161, 232, 0.26);
+  background: rgba(132, 117, 207, 0.11);
+  color: #c7bff3;
+}
+
+.memoryvault-page #dashboardSection .memory-card .memory-status.revealed {
+  border-color: rgba(143, 198, 173, 0.26);
+  background: rgba(92, 152, 119, 0.1);
+  color: #abd5bb;
+}
+
+.memoryvault-page #dashboardSection .memory-countdown.unlocked {
+  color: #afd8bf;
+}
+
+.memoryvault-page #dashboardSection input:not([type="file"]),
+.memoryvault-page #dashboardSection textarea,
+.memoryvault-page #dashboardSection select {
+  border-color: rgba(224, 214, 194, 0.18);
+  background-color: #10131a;
+  color: var(--mv-ivory);
+}
+
+.memoryvault-page #dashboardSection input:focus-visible,
+.memoryvault-page #dashboardSection textarea:focus-visible,
+.memoryvault-page #dashboardSection select:focus-visible {
+  border-color: rgba(224, 189, 136, 0.72);
+  box-shadow: 0 0 0 4px rgba(224, 189, 136, 0.1);
+}
+
+.memoryvault-page #dashboardSection .memory-tools {
+  grid-template-columns: minmax(0, 1fr) minmax(145px, 0.34fr);
+}
+
+.memoryvault-page #dashboardSection .mv-empty-state {
+  border-color: rgba(224, 189, 136, 0.2);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(194, 154, 102, 0.1), transparent 55%),
+    rgba(15, 18, 24, 0.7);
+}
+
+.memoryvault-page #dashboardSection .mv-empty-state-icon {
+  border-color: rgba(224, 189, 136, 0.27);
+  background: rgba(193, 153, 102, 0.1);
+  color: var(--mv-champagne);
+}
+
+/* Keep the admin console legible and aligned with the product palette. */
+.memoryvault-page #adminDashboardSection .cyber-sidebar {
+  border-color: var(--mv-line);
+  background: linear-gradient(180deg, #14171e, #0d1016);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-sidebar-label,
+.memoryvault-page #adminDashboardSection .cyber-eyebrow,
+.memoryvault-page #adminDashboardSection .cyber-metric-label {
+  color: #d6b889;
+}
+
+.memoryvault-page #adminDashboardSection .cyber-page-heading h1,
+.memoryvault-page #adminDashboardSection .cyber-page-heading h1 span,
+.memoryvault-page #adminDashboardSection .cyber-section-heading h2 {
+  color: var(--mv-ivory);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-topbar {
+  border-color: var(--mv-line);
+  background: rgba(13, 16, 22, 0.88);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-metric-card,
+.memoryvault-page #adminDashboardSection .cyber-account-card,
+.memoryvault-page #adminDashboardSection .admin-user-card {
+  border-color: var(--mv-line);
+  background: linear-gradient(145deg, rgba(25, 29, 37, 0.96), rgba(15, 18, 24, 0.98));
+}
+
+/* FamilyVault uses the same component language with warmer, family-specific accents. */
+.familyvault-page .family-app-shell {
+  width: min(1240px, calc(100% - 56px));
+  padding-bottom: 24px;
+}
+
+.familyvault-page .topbar,
+.familyvault-page .family-dashboard-nav {
+  border-color: rgba(227, 204, 169, 0.13);
+}
+
+.familyvault-page .brand {
+  color: var(--mv-ivory);
+}
+
+.familyvault-page .brand > span:last-child > span {
+  color: #d7bb91;
+}
+
+.familyvault-page .brand-mark {
+  border-color: rgba(221, 190, 145, 0.35);
+  background: linear-gradient(145deg, rgba(172, 127, 79, 0.2), rgba(115, 101, 157, 0.15));
+  color: #e7c89b;
+}
+
+.familyvault-page .family-auth-hero {
+  padding-top: clamp(46px, 6vw, 72px);
+}
+
+.familyvault-page .family-auth-hero h1 {
+  max-width: 670px;
+  color: #f2ede4;
+  font-size: clamp(41px, 5.2vw, 65px);
+}
+
+.familyvault-page .family-auth-hero h1 em,
+.familyvault-page .family-dashboard-hero-copy h1 {
+  color: #e6c392;
+}
+
+.familyvault-page .family-auth-hero > p {
+  max-width: 560px;
+}
+
+.familyvault-page .panel,
+.familyvault-page .family-dashboard-hero {
+  border-color: rgba(227, 204, 169, 0.15);
+  border-radius: 20px;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(183, 139, 86, 0.07), transparent 46%),
+    linear-gradient(145deg, rgba(25, 27, 31, 0.96), rgba(15, 17, 22, 0.98));
+  box-shadow: 0 20px 54px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255,255,255,.025);
+}
+
+.familyvault-page .family-auth-panel .tabs {
+  border-color: rgba(227, 204, 169, 0.12);
+  background: rgba(7, 9, 13, 0.52);
+}
+
+.familyvault-page .family-auth-panel .tab.active {
+  border-color: rgba(224, 189, 136, 0.26);
+  background: linear-gradient(115deg, rgba(176, 132, 82, 0.18), rgba(132, 119, 181, 0.13));
+  color: #f0d7b1;
+}
+
+.familyvault-page .form input,
+.familyvault-page .form textarea,
+.familyvault-page fieldset input {
+  border-color: rgba(224, 214, 194, 0.17);
+  background: rgba(8, 10, 14, 0.75);
+}
+
+.familyvault-page .form input:focus,
+.familyvault-page .form textarea:focus,
+.familyvault-page fieldset input:focus {
+  border-color: rgba(224, 189, 136, 0.72);
+  box-shadow: 0 0 0 4px rgba(224, 189, 136, 0.1);
+}
+
+.familyvault-page .primary {
+  border-color: rgba(236, 205, 157, 0.27);
+  background: linear-gradient(110deg, #a97c4e, #8272a8 72%, #5b9095);
+  box-shadow: 0 12px 28px rgba(112, 80, 55, 0.18), inset 0 1px rgba(255,255,255,.12);
+}
+
+.familyvault-page .family-auth-panel .primary {
+  background: linear-gradient(110deg, #ad8052, #8877ab 76%);
+}
+
+.familyvault-page .family-dashboard-nav {
+  background: rgba(12, 13, 16, 0.9);
+}
+
+.familyvault-page .family-dashboard-hero {
+  min-height: 360px;
+  border-radius: 22px;
+  background:
+    radial-gradient(ellipse at 80% 54%, rgba(191, 142, 83, 0.12), transparent 39%),
+    linear-gradient(125deg, #211f1d, #17191e 62%, #201c22);
+}
+
+.familyvault-page .family-dashboard-art {
+  width: min(100%, 450px);
+}
+
+.familyvault-page .family-dashboard-art::after {
+  background: linear-gradient(90deg, rgba(23, 28, 38, 0.3), transparent 26%, transparent 82%, rgba(23, 28, 38, 0.18));
+}
+
+.familyvault-page .member-card,
+.familyvault-page .memory-card {
+  border-color: rgba(224, 214, 194, 0.14);
+  background: linear-gradient(145deg, rgba(29, 30, 33, 0.96), rgba(15, 17, 22, 0.98));
+}
+
+.familyvault-page .member-card:hover,
+.familyvault-page #memoriesList .memory-card:hover {
+  border-color: rgba(224, 189, 136, 0.3);
+}
+
+.familyvault-page .memory-card.locked {
+  border-color: rgba(170, 161, 232, 0.22);
+  background:
+    linear-gradient(145deg, rgba(63, 54, 80, 0.17), transparent 68%),
+    linear-gradient(145deg, rgba(26, 27, 34, 0.97), rgba(14, 16, 21, 0.99));
+}
+
+.familyvault-page .family-footer {
+  border-top: 1px solid rgba(227, 204, 169, 0.12);
+}
+
+.family-auth-orbit {
+  position: absolute;
+  right: -44px;
+  bottom: -48px;
+  width: 215px;
+  height: 190px;
+  border: 1px solid rgba(227, 196, 151, 0.16);
+  border-radius: 50%;
+  opacity: 0.72;
+  transform: rotate(-17deg);
+  pointer-events: none;
+}
+
+.family-auth-orbit::before,
+.family-auth-orbit::after {
+  position: absolute;
+  inset: 18px 34px;
+  border: 1px solid rgba(187, 172, 222, 0.19);
+  border-radius: 50%;
+  content: "";
+}
+
+.family-auth-orbit::after {
+  inset: 39px 8px;
+  transform: rotate(45deg);
+}
+
+.family-auth-orbit .orbit-center,
+.family-auth-orbit .orbit-person {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(230, 199, 154, 0.42);
+  border-radius: 50%;
+  background: #1b1b1f;
+  color: #e6c392;
+}
+
+.family-auth-orbit .orbit-center {
+  top: 72px;
+  left: 91px;
+  width: 34px;
+  height: 34px;
+}
+
+.family-auth-orbit .orbit-person {
+  width: 28px;
+  height: 28px;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.family-auth-orbit .orbit-person-one {
+  top: 8px;
+  left: 91px;
+}
+
+.family-auth-orbit .orbit-person-two {
+  right: 12px;
+  bottom: 34px;
+  border-color: rgba(179, 167, 229, 0.48);
+  color: #c4b8ee;
+}
+
+.family-auth-orbit .orbit-person-three {
+  bottom: 8px;
+  left: 35px;
+}
+
+.familyvault-page .member-card::before {
+  display: none;
+}
+
+.familyvault-page .family-people-panel .member-card {
+  min-height: 164px;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 18px;
+}
+
+.familyvault-page .member-avatar {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(210, 184, 145, 0.38);
+  border-radius: 50%;
+  background: linear-gradient(145deg, rgba(168, 126, 78, 0.23), rgba(103, 90, 137, 0.16));
+  color: #efcf9d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.familyvault-page .member-member:nth-child(3n + 2) .member-avatar {
+  border-color: rgba(176, 166, 220, 0.4);
+  background: linear-gradient(145deg, rgba(130, 117, 184, 0.26), rgba(75, 120, 130, 0.14));
+  color: #d3cbf2;
+}
+
+.familyvault-page .member-member:nth-child(3n + 3) .member-avatar {
+  border-color: rgba(140, 191, 181, 0.36);
+  background: linear-gradient(145deg, rgba(75, 140, 125, 0.22), rgba(174, 130, 86, 0.13));
+  color: #bde0d4;
+}
+
+.familyvault-page .member-role {
+  display: inline-flex;
+  margin-bottom: 6px;
+  color: #d8b98b;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.familyvault-page .member-member .member-role {
+  color: #b9b1df;
+}
+
+.familyvault-page .family-activity {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.72fr) minmax(250px, 1fr) minmax(250px, 1.15fr);
+  align-items: center;
+  gap: clamp(18px, 3vw, 36px);
+  margin: 0 0 20px;
+  padding: clamp(22px, 3vw, 32px);
+}
+
+.familyvault-page .activity-intro .eyebrow {
+  margin: 0 0 7px;
+  color: #d7b783;
+}
+
+.familyvault-page .activity-intro h2 {
+  margin: 0 0 6px;
+  color: #f0ece4;
+  font-size: clamp(21px, 2.4vw, 27px);
+  letter-spacing: -0.04em;
+}
+
+.familyvault-page .activity-intro > p:last-child {
+  margin: 0;
+  font-size: 12px;
+}
+
+.familyvault-page .activity-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.familyvault-page .activity-stats > div {
+  display: grid;
+  gap: 6px;
+  padding: 13px 10px;
+  border: 1px solid rgba(227, 204, 169, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 247, 235, 0.025);
+}
+
+.familyvault-page .activity-stats strong {
+  color: #e3c18f;
+  font-size: 23px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.familyvault-page .activity-stats span {
+  color: #aaa59d;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.familyvault-page .family-activity-timeline {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0 0 0 17px;
+  list-style: none;
+}
+
+.familyvault-page .family-activity-timeline::before {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 4px;
+  width: 1px;
+  background: linear-gradient(rgba(222, 187, 133, 0.5), rgba(166, 156, 210, 0.12));
+  content: "";
+}
+
+.familyvault-page .activity-entry {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3px;
+  min-width: 0;
+}
+
+.familyvault-page .activity-marker {
+  position: absolute;
+  top: 5px;
+  left: -17px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #d5b17d;
+  border-radius: 50%;
+  background: #191a1d;
+  box-shadow: 0 0 10px rgba(213, 177, 125, 0.18);
+}
+
+.familyvault-page .activity-entry.is-revealed .activity-marker {
+  border-color: #9dc5a9;
+}
+
+.familyvault-page .activity-entry strong {
+  overflow: hidden;
+  color: #e6e1d8;
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.familyvault-page .activity-entry small {
+  color: #92918e;
+  font-size: 9px;
+}
+
+.familyvault-page .activity-empty {
+  color: #a7a39c;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.familyvault-page .family-dashboard-hero + .family-activity {
+  margin-top: 0;
+}
+
+.familyvault-page .dashboard-message {
+  margin: 12px 0 0;
+}
+
+.familyvault-page .family-memory-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  margin-bottom: 15px;
+}
+
+.familyvault-page .family-memory-status,
+.familyvault-page .family-memory-category {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 4px 9px;
+  border: 1px solid rgba(144, 196, 165, 0.23);
+  border-radius: 999px;
+  background: rgba(102, 158, 120, 0.08);
+  color: #a9d0b4;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.familyvault-page .memory-card.locked .family-memory-status {
+  border-color: rgba(179, 165, 228, 0.25);
+  background: rgba(126, 108, 188, 0.09);
+  color: #c5b9ef;
+}
+
+.familyvault-page .family-memory-category {
+  border-color: rgba(224, 189, 136, 0.16);
+  background: rgba(224, 189, 136, 0.045);
+  color: #cdb797;
+}
+
+.familyvault-page #memoriesList .memory-card h3 {
+  margin: 0;
+  color: #f0ece4;
+  font-size: 18px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.familyvault-page #memoriesList .memory-card .family-memory-copy {
+  margin: 12px 0 0;
+  color: #c1bbb2;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.familyvault-page .family-memory-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 19px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(224, 214, 194, 0.1);
+}
+
+.familyvault-page .family-memory-meta span {
+  color: #99958e;
+  font-size: 10px;
+}
+
+.familyvault-page .family-memory-media {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 17px;
+}
+
+.familyvault-page .memory-media-label {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #c8b596;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.familyvault-page .family-media-item {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 2px 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(224, 214, 194, 0.13);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  text-align: left;
+}
+
+.familyvault-page .family-media-item:hover:not(:disabled) {
+  border-color: rgba(224, 189, 136, 0.34);
+  background: rgba(224, 189, 136, 0.06);
+}
+
+.familyvault-page .family-media-item:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.familyvault-page .family-media-icon {
+  grid-row: span 2;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(219, 188, 139, 0.2);
+  border-radius: 9px;
+  color: #e0bd88;
+}
+
+.familyvault-page .family-media-video .family-media-icon {
+  color: #c3b9eb;
+}
+
+.familyvault-page .family-media-audio .family-media-icon {
+  color: #a9d4c8;
+}
+
+.familyvault-page .family-media-name {
+  overflow: hidden;
+  color: #ddd7ce;
+  font-size: 10px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.familyvault-page .family-media-item small {
+  color: #96918a;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.familyvault-page .memory-media-locked {
+  margin: 14px 0 0;
+  color: #c5b9ef;
+  font-size: 11px;
+}
+
+.familyvault-page .family-empty-state {
+  grid-column: 1 / -1;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-height: 220px;
+  padding: 36px 22px;
+  border: 1px dashed rgba(216, 186, 143, 0.23);
+  border-radius: 17px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(196, 150, 91, 0.08), transparent 58%);
+  text-align: center;
+}
+
+.familyvault-page .empty-memory-orbit {
+  width: 49px;
+  height: 49px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+  border: 1px solid rgba(224, 189, 136, 0.3);
+  border-radius: 50%;
+  background: rgba(193, 153, 102, 0.08);
+  color: #e2bd89;
+}
+
+.familyvault-page .family-empty-state strong {
+  color: #eee8dd;
+  font-size: 15px;
+}
+
+.familyvault-page .family-empty-state p {
+  max-width: 380px;
+  margin: 0;
+  color: #aaa59d;
+  font-size: 12px;
+}
+
+.familyvault-page .family-memory-skeleton {
+  min-height: 194px;
+  border: 1px solid rgba(224, 214, 194, 0.1);
+  border-radius: 17px;
+  background:
+    linear-gradient(90deg, transparent, rgba(240, 225, 203, 0.055), transparent) 0 0 / 220% 100%,
+    linear-gradient(145deg, rgba(29, 30, 33, 0.96), rgba(15, 17, 22, 0.98));
+  animation: family-skeleton-shimmer 1.8s ease-in-out infinite;
+}
+
+.familyvault-page #memoriesList.is-loading,
+.familyvault-page #memoriesList.is-error,
+.familyvault-page #memoriesList:not(:has(.memory-card)) {
+  position: static;
+  min-height: 0;
+  display: grid;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.familyvault-page #memoriesList.is-loading::before,
+.familyvault-page #memoriesList.is-error::before,
+.familyvault-page #memoriesList:not(:has(.memory-card))::before {
+  display: none;
+  content: none;
+}
+
+.familyvault-page .family-memory-load-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid rgba(220, 126, 128, 0.25);
+  border-radius: 12px;
+  background: rgba(130, 45, 50, 0.08);
+  color: #e4a5a2;
+  overflow-wrap: anywhere;
+}
+
+.family-media-preview {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(4, 5, 8, 0.84);
+  backdrop-filter: blur(14px);
+  animation: family-preview-in 180ms ease-out both;
+}
+
+.family-media-preview-panel {
+  width: min(850px, 100%);
+  max-height: min(88vh, 900px);
+  overflow: auto;
+  border: 1px solid rgba(224, 189, 136, 0.22);
+  border-radius: 19px;
+  background: #14161b;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.48);
+}
+
+.family-media-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 19px;
+  border-bottom: 1px solid rgba(224, 214, 194, 0.1);
+}
+
+.family-media-preview-header h2 {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #f0ece4;
+  font-size: 15px;
+}
+
+.family-media-preview-close {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border: 1px solid var(--mv-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e1ddd5;
+  font-size: 20px;
+}
+
+.family-media-preview-stage {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  padding: clamp(14px, 3vw, 28px);
+}
+
+.family-media-preview-player {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: min(68vh, 700px);
+  border-radius: 11px;
+  object-fit: contain;
+}
+
+audio.family-media-preview-player {
+  width: min(560px, 100%);
+}
+
+@keyframes family-preview-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes family-skeleton-shimmer {
+  to { background-position: -220% 0, 0 0; }
+}
+
+@media (max-width: 900px) {
+  .memoryvault-page .hero {
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.76fr);
+    gap: 22px;
+    padding-right: 32px;
+    padding-left: 32px;
+  }
+
+  .memoryvault-page #dashboardSection .dashboard-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .familyvault-page .family-activity {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .memoryvault-page .navbar {
+    min-height: 64px;
+    padding: 0 18px;
+  }
+
+  .memoryvault-page .nav-links {
+    gap: 10px;
+  }
+
+  .memoryvault-page .nav-links a:not(.family-nav-link) {
+    display: none;
+  }
+
+  .memoryvault-page .nav-links .family-nav-link {
+    font-size: 11px;
+  }
+
+  .memoryvault-page .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 70px 24px 56px;
+  }
+
+  .memoryvault-page #cosmicIntro .mv-scene-art {
+    width: 120px;
+    max-height: 100px;
+    margin-left: 0;
+    opacity: 0.1;
+  }
+
+  .memoryvault-page .hero-title {
+    font-size: clamp(50px, 15vw, 76px);
+  }
+
+  .memoryvault-page .hero-description {
+    margin-top: 18px;
+    font-size: 15px;
+  }
+
+  .hero-art {
+    width: min(100%, 420px);
+    justify-self: center;
+    margin: -4px auto -16px;
+  }
+
+  .hero-art-caption {
+    right: 8%;
+    bottom: 8%;
+    font-size: 8px;
+  }
+
+  .memoryvault-page .section {
+    width: min(100% - 36px, 540px);
+  }
+
+  .memoryvault-page #dashboardSection .dashboard-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .memoryvault-page #dashboardSection .vault-archive-panel .memories-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .memoryvault-page #dashboardSection .memory-tools {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .familyvault-page .family-app-shell {
+    width: calc(100% - 32px);
+  }
+
+  .familyvault-page .family-auth-screen > .topbar {
+    min-height: 68px;
+  }
+
+  .familyvault-page .family-dashboard-nav {
+    margin-right: -16px;
+    margin-left: -16px;
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .familyvault-page .family-dashboard-hero {
+    margin-top: 16px;
+  }
+
+  .familyvault-page .family-dashboard-identity p {
+    display: none;
+  }
+
+  .familyvault-page .family-activity {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 21px;
+  }
+}
+
+@media (max-width: 430px) {
+  .memoryvault-page .hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .memoryvault-page .hero-actions .btn {
+    width: 100%;
+  }
+
+  .memoryvault-page .landing-modal {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .memoryvault-page .auth-personal-panel,
+  .memoryvault-page .auth-family-panel {
+    padding: 25px 20px;
+  }
+
+  .familyvault-page .brand-divider,
+  .familyvault-page .family-auth-screen > .topbar .family-brand-name {
+    display: none;
+  }
+
+  .familyvault-page .family-auth-screen > .topbar .brand {
+    font-size: 15px;
+  }
+
+  .familyvault-page .back-link {
+    max-width: 125px;
+  }
+
+  .familyvault-page .activity-stats {
+    gap: 6px;
+  }
+
+  .familyvault-page .activity-stats > div {
+    padding: 10px 7px;
+  }
+
+  .familyvault-page .activity-stats strong {
+    font-size: 20px;
+  }
+
+  .familyvault-page .activity-stats span {
+    font-size: 8px;
+  }
+
+  .familyvault-page .family-memory-media {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  .memoryvault-page *,
+  .memoryvault-page *::before,
+  .memoryvault-page *::after,
+  .familyvault-page *,
+  .familyvault-page *::before,
+  .familyvault-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .familyvault-page .family-memory-skeleton {
+    animation: none;
+  }
+}
+
+/* Final visual polish: shared interaction timing, readable supporting text,
+   and a consistent surface language across personal, admin, and family views. */
+:root {
+  --mv-polish-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --mv-polish-fast: 180ms;
+  --mv-polish-medium: 280ms;
+}
+
+.memoryvault-page :where(.section-description, .form-hint, .media-upload-help, .memory-upload-help),
+.familyvault-page :where(.hint, .muted, .upload-hint, .form-intro > p:last-child) {
+  color: #b7b2aa;
+}
+
+.memoryvault-page input::placeholder,
+.memoryvault-page textarea::placeholder,
+.familyvault-page input::placeholder,
+.familyvault-page textarea::placeholder {
+  color: #a39d92;
+  opacity: 1;
+}
+
+.memoryvault-page :where(.memory-card, .dashboard-stat, .step-card, .feature-card, .cyber-metric-card, .cyber-account-card, .admin-user-card, .admin-memory-card),
+.familyvault-page :where(.panel, .member-card, .memory-card, .family-dashboard-hero) {
+  transition:
+    border-color var(--mv-polish-medium) ease,
+    box-shadow var(--mv-polish-medium) ease,
+    background-color var(--mv-polish-medium) ease,
+    transform var(--mv-polish-medium) var(--mv-polish-ease);
+}
+
+.memoryvault-page :where(button, .btn, .cyber-nav-link),
+.familyvault-page :where(button, .primary, .secondary, .tab, .family-media-item, .media-links a) {
+  transition:
+    color var(--mv-polish-fast) ease,
+    background-color var(--mv-polish-fast) ease,
+    border-color var(--mv-polish-fast) ease,
+    box-shadow var(--mv-polish-fast) ease,
+    transform var(--mv-polish-fast) var(--mv-polish-ease);
+}
+
+.memoryvault-page .landing-modal {
+  opacity: 1;
+  transition: opacity 240ms ease, display 240ms allow-discrete;
+}
+
+.memoryvault-page .landing-modal.hidden {
+  opacity: 0;
+  transition: opacity 200ms ease, display 200ms allow-discrete;
+}
+
+.memoryvault-page .landing-modal-box {
+  animation: mv-dialog-arrive 360ms var(--mv-polish-ease) both;
+}
+
+@starting-style {
+  .memoryvault-page .landing-modal:not(.hidden) {
+    opacity: 0;
+  }
+}
+
+.memoryvault-page .modal-close,
+.familyvault-page .family-media-preview-close {
+  transition:
+    color var(--mv-polish-fast) ease,
+    background-color var(--mv-polish-fast) ease,
+    border-color var(--mv-polish-fast) ease,
+    transform var(--mv-polish-fast) var(--mv-polish-ease);
+}
+
+.memoryvault-page .modal-close:hover,
+.familyvault-page .family-media-preview-close:hover {
+  transform: rotate(4deg);
+  border-color: rgba(224, 189, 136, 0.36);
+  background: rgba(224, 189, 136, 0.09);
+  color: #f2eee7;
+}
+
+.familyvault-page #authView:not(.hidden),
+.familyvault-page #dashboardView:not(.hidden) {
+  animation: mv-view-arrive 460ms var(--mv-polish-ease) both;
+}
+
+.familyvault-page .family-media-preview-panel {
+  animation: mv-dialog-arrive 300ms var(--mv-polish-ease) both;
+}
+
+.familyvault-page .activity-entry strong,
+.familyvault-page .activity-entry small,
+.familyvault-page .family-memory-meta span,
+.familyvault-page .family-media-item small {
+  color: #aaa59d;
+}
+
+.familyvault-page .family-activity,
+.familyvault-page .family-people-panel,
+.familyvault-page .family-create-panel {
+  padding: clamp(24px, 3.2vw, 36px);
+}
+
+.familyvault-page .family-archive-section {
+  padding: clamp(24px, 3.2vw, 36px) 0;
+}
+
+.familyvault-page .archive-heading {
+  margin-top: 20px;
+  margin-bottom: 27px;
+  padding-bottom: 22px;
+}
+
+.familyvault-page .archive-heading p:not(.eyebrow) {
+  color: #b7b2aa;
+}
+
+.familyvault-page .activity-stats span,
+.familyvault-page .family-empty-state p,
+.familyvault-page .family-memory-load-error {
+  color: #b7b2aa;
+}
+
+/* Keep the admin console's existing layout and controls while aligning its
+   neon-heavy decoration with the product's champagne and violet accents. */
+.memoryvault-page #adminDashboardSection {
+  --cy-cyan: #e0bd88;
+  --cy-pink: #aaa1e8;
+  --cy-violet: #aaa1e8;
+  --cy-blue: #bc8e5e;
+  --cy-white: #f2eee7;
+  --cy-muted: #b7b2aa;
+  background:
+    radial-gradient(ellipse at 12% 12%, rgba(132, 103, 70, 0.1), transparent 36%),
+    radial-gradient(ellipse at 90% 12%, rgba(129, 114, 173, 0.09), transparent 34%),
+    linear-gradient(145deg, #0b0d13, #111018 58%, #0b0d13);
+}
+
+.memoryvault-page #adminDashboardSection::before {
+  background:
+    linear-gradient(rgba(224, 189, 136, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(224, 189, 136, 0.035) 1px, transparent 1px);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-sidebar {
+  border-color: var(--mv-line);
+  background:
+    radial-gradient(ellipse at 0 0, rgba(178, 143, 97, 0.08), transparent 55%),
+    linear-gradient(180deg, #14171e, #0d1016);
+  box-shadow: 8px 0 34px rgba(0, 0, 0, 0.2);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-brand,
+.memoryvault-page #adminDashboardSection .cyber-topbar {
+  border-color: var(--mv-line);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-brand-icon,
+.memoryvault-page #adminDashboardSection .cyber-access-badge,
+.memoryvault-page #adminDashboardSection .cyber-refresh-button {
+  border-color: rgba(224, 189, 136, 0.3);
+  background: rgba(224, 189, 136, 0.07);
+  color: var(--mv-champagne);
+  box-shadow: inset 0 0 18px rgba(224, 189, 136, 0.035);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-brand-icon {
+  border-radius: 12px;
+  text-shadow: 0 0 16px rgba(224, 189, 136, 0.22);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-sidebar-label,
+.memoryvault-page #adminDashboardSection .cyber-eyebrow,
+.memoryvault-page #adminDashboardSection .cyber-metric-label,
+.memoryvault-page #adminDashboardSection .cyber-brand small {
+  color: #d6bd98;
+}
+
+.memoryvault-page #adminDashboardSection .cyber-nav-link {
+  border-radius: 9px;
+  color: #c1bbb2;
+}
+
+.memoryvault-page #adminDashboardSection .cyber-nav-link span,
+.memoryvault-page #adminDashboardSection .cyber-metric-icon,
+.memoryvault-page #adminDashboardSection .magenta .cyber-metric-icon,
+.memoryvault-page #adminDashboardSection .violet .cyber-metric-icon {
+  color: var(--mv-champagne);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-nav-link:hover,
+.memoryvault-page #adminDashboardSection .cyber-nav-link.active {
+  border-color: rgba(224, 189, 136, 0.23);
+  background: rgba(224, 189, 136, 0.075);
+  box-shadow: inset 3px 0 var(--mv-champagne);
+  color: #f2eee7;
+}
+
+.memoryvault-page #adminDashboardSection .cyber-session-card,
+.memoryvault-page #adminDashboardSection .cyber-metric-card,
+.memoryvault-page #adminDashboardSection .cyber-users-panel,
+.memoryvault-page #adminDashboardSection .cyber-account-list .admin-user-card,
+.memoryvault-page #adminDashboardSection .admin-memory-card,
+.memoryvault-page #adminDashboardSection .family-admin-stat,
+.memoryvault-page #adminDashboardSection .family-admin-card,
+.memoryvault-page #adminDashboardSection .family-admin-details {
+  border-color: var(--mv-line);
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(178, 143, 97, 0.045), transparent 48%),
+    linear-gradient(145deg, rgba(24, 27, 34, 0.97), rgba(13, 16, 22, 0.99));
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18), inset 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-main {
+  background:
+    radial-gradient(ellipse at 15% 0, rgba(178, 143, 97, 0.04), transparent 42%),
+    radial-gradient(ellipse at 100% 0, rgba(129, 114, 173, 0.04), transparent 38%),
+    #0b0d13;
+}
+
+.memoryvault-page #adminDashboardSection .cyber-main::before {
+  background-image:
+    linear-gradient(rgba(224, 189, 136, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(224, 189, 136, 0.025) 1px, transparent 1px);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-metric-card.magenta,
+.memoryvault-page #adminDashboardSection .cyber-metric-card.violet {
+  border-color: var(--mv-line);
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(170, 161, 232, 0.055), transparent 48%),
+    linear-gradient(145deg, rgba(24, 27, 34, 0.97), rgba(13, 16, 22, 0.99));
+}
+
+.memoryvault-page #adminDashboardSection .cyber-metric-number,
+.memoryvault-page #adminDashboardSection .magenta .cyber-metric-number,
+.memoryvault-page #adminDashboardSection .violet .cyber-metric-number {
+  color: var(--mv-champagne);
+  text-shadow: 0 0 18px rgba(224, 189, 136, 0.14);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-metric-line,
+.memoryvault-page #adminDashboardSection .magenta .cyber-metric-line,
+.memoryvault-page #adminDashboardSection .violet .cyber-metric-line {
+  background: linear-gradient(90deg, var(--mv-champagne), rgba(170, 161, 232, 0.35), transparent 90%);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-account-list .admin-user-card {
+  border-left: 1px solid var(--mv-line-strong);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-account-list .admin-user-card::after {
+  color: rgba(224, 189, 136, 0.6);
+}
+
+.memoryvault-page #adminDashboardSection .admin-user-role {
+  border-color: rgba(170, 161, 232, 0.28);
+  border-radius: 999px;
+  background: rgba(170, 161, 232, 0.075);
+  color: #c8c0f0;
+}
+
+.memoryvault-page #adminDashboardSection .family-admin-status.is-unverified,
+.memoryvault-page #adminDashboardSection .family-admin-status.is-disabled {
+  border-color: rgba(224, 189, 136, 0.28);
+  background-color: rgba(224, 189, 136, 0.065);
+  color: #e0bd88;
+}
+
+.memoryvault-page #adminDashboardSection .family-admin-stat.is-unverified span {
+  color: #e0bd88;
+}
+
+.memoryvault-page #adminDashboardSection .family-admin-stat.is-verified span,
+.memoryvault-page #adminDashboardSection .family-admin-status.is-verified,
+.memoryvault-page #adminDashboardSection .family-admin-status.is-active {
+  color: #a9d0b4;
+}
+
+.memoryvault-page #adminDashboardSection .admin-user-details p,
+.memoryvault-page #adminDashboardSection .cyber-page-heading p:not(.cyber-eyebrow),
+.memoryvault-page #adminDashboardSection .cyber-section-heading p:not(.cyber-eyebrow),
+.memoryvault-page #adminDashboardSection .admin-memory-card p {
+  color: #b7b2aa;
+}
+
+.memoryvault-page #adminDashboardSection .cyber-memory-inspector,
+.memoryvault-page #adminDashboardSection .admin-user-memories {
+  border-color: var(--mv-line);
+}
+
+.memoryvault-page #adminDashboardSection .cyber-memory-inspector h3,
+.memoryvault-page #adminDashboardSection .admin-user-memories h3 {
+  color: var(--mv-champagne);
+}
+
+.memoryvault-page #adminDashboardSection :where(input, select, textarea)::placeholder {
+  color: #a39d92;
+  opacity: 1;
+}
+
+.memoryvault-page #adminDashboardSection :where(button, a, input, select, textarea):focus-visible {
+  outline-color: var(--mv-focus);
+}
+
+@keyframes mv-dialog-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes mv-view-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .memoryvault-page #dashboardSection .memory-card:hover,
+  .familyvault-page #memoriesList .memory-card:hover,
+  .familyvault-page .member-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .memoryvault-page #adminDashboardSection .cyber-metric-card:hover,
+  .memoryvault-page #adminDashboardSection .cyber-account-list .admin-user-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(224, 189, 136, 0.34);
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.24), 0 0 22px rgba(224, 189, 136, 0.045);
+  }
+}

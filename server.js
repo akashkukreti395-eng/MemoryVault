@@ -10,6 +10,8 @@ const { createClient } = require("@supabase/supabase-js");
 
 dotenv.config();
 
+// Resend email integration
+
 // Mailjet email integration
 async function sendAppEmail({ to, subject, html }) {
     const apiKey = process.env.MAILJET_API_KEY;
@@ -35,10 +37,7 @@ async function sendAppEmail({ to, subject, html }) {
         },
         body: JSON.stringify({
             Messages: [{
-                From: {
-                    Email: fromEmail,
-                    Name: fromName
-                },
+                From: { Email: fromEmail, Name: fromName },
                 To: [{ Email: to }],
                 Subject: subject,
                 HTMLPart: html
@@ -63,6 +62,7 @@ async function sendAppEmail({ to, subject, html }) {
         messageId: message.To?.[0]?.MessageID || "accepted"
     };
 }
+
 
 
 function escapeHtml(value) {
@@ -317,13 +317,342 @@ app.get("/api/admin/stats", requireAdmin, async (req, res) => {
                 (SELECT COUNT(*)::int
                  FROM memories
                  WHERE NULLIF(reveal_at, '')::timestamptz <= NOW()
-                ) AS revealed_memories
+                ) AS revealed_memories,
+
+                (SELECT COUNT(*)::int
+                 FROM family_accounts) AS family_total_accounts,
+
+                (SELECT COUNT(*)::int
+                 FROM family_accounts
+                 WHERE email_verified = TRUE) AS family_verified_accounts,
+
+                (SELECT COUNT(*)::int
+                 FROM family_accounts
+                 WHERE email_verified = FALSE) AS family_unverified_accounts,
+
+                (SELECT COUNT(*)::int
+                 FROM family_members) AS family_total_members,
+
+                (SELECT COUNT(*)::int
+                 FROM family_memories) AS family_total_memories,
+
+                (SELECT COUNT(*)::int
+                 FROM family_attachments) AS family_total_attachments,
+
+                (SELECT COUNT(*)::int
+                 FROM family_memories
+                 WHERE reveal_at > NOW()) AS family_locked_memories,
+
+                (SELECT COUNT(*)::int
+                 FROM family_memories
+                 WHERE reveal_at <= NOW()) AS family_revealed_memories
         `);
 
         res.json({ stats: result.rows[0] });
     } catch (error) {
         console.error("Admin statistics error:", error);
         res.status(500).json({ error: "Unable to load admin statistics." });
+    }
+});
+
+app.get("/api/admin/families", requireAdmin, async (req, res) => {
+    try {
+        const search = String(req.query.search || "").trim();
+        const pageValue = String(req.query.page || "1");
+        const pageSizeValue = String(req.query.pageSize || "8");
+        if (!/^\d+$/.test(pageValue) || !/^\d+$/.test(pageSizeValue)) {
+            return res.status(400).json({ error: "Invalid pagination values." });
+        }
+
+        const page = Number(pageValue);
+        const pageSize = Number(pageSizeValue);
+        if (!Number.isSafeInteger(page) || page < 1 ||
+            !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 50) {
+            return res.status(400).json({ error: "Invalid pagination values." });
+        }
+
+        const searchPattern = `%${search}%`;
+        const countResult = await pgPool.query(`
+            SELECT COUNT(*)::int AS total
+            FROM family_accounts fa
+            WHERE $1 = ''
+               OR fa.family_name ILIKE $2
+               OR fa.owner_name ILIKE $2
+               OR fa.owner_username ILIKE $2
+               OR fa.owner_email ILIKE $2
+        `, [search, searchPattern]);
+        const familyResult = await pgPool.query(`
+            SELECT
+                fa.id,
+                fa.family_name,
+                fa.owner_name,
+                fa.owner_username,
+                fa.owner_email,
+                fa.email_verified,
+                fa.created_at,
+                (SELECT COUNT(*)::int
+                 FROM family_members fm
+                 WHERE fm.family_id = fa.id) AS member_count,
+                (SELECT COUNT(*)::int
+                 FROM family_memories fmem
+                 WHERE fmem.family_id = fa.id) AS memory_count
+            FROM family_accounts fa
+            WHERE $1 = ''
+               OR fa.family_name ILIKE $2
+               OR fa.owner_name ILIKE $2
+               OR fa.owner_username ILIKE $2
+               OR fa.owner_email ILIKE $2
+            ORDER BY fa.created_at DESC, fa.id DESC
+            LIMIT $3 OFFSET $4
+        `, [search, searchPattern, pageSize, (page - 1) * pageSize]);
+
+        res.json({
+            families: familyResult.rows,
+            total: countResult.rows[0].total,
+            page,
+            pageSize
+        });
+    } catch (error) {
+        console.error("Admin family directory error:", error);
+        res.status(500).json({ error: "Could not load family accounts." });
+    }
+});
+
+app.get("/api/admin/families/:familyId", requireAdmin, async (req, res) => {
+    try {
+        const familyId = Number(req.params.familyId);
+        if (!Number.isSafeInteger(familyId) || familyId <= 0) {
+            return res.status(400).json({ error: "Invalid family ID." });
+        }
+
+        const familyResult = await pgPool.query(`
+            SELECT id, family_name, owner_name, owner_username, owner_email,
+                   email_verified, created_at
+            FROM family_accounts
+            WHERE id = $1
+        `, [familyId]);
+        const family = familyResult.rows[0];
+        if (!family) return res.status(404).json({ error: "Family account not found." });
+
+        const [membersResult, memoriesResult] = await Promise.all([
+            pgPool.query(`
+                SELECT id, family_id, name, username, status, created_at
+                FROM family_members
+                WHERE family_id = $1
+                ORDER BY created_at, id
+            `, [familyId]),
+            pgPool.query(`
+                SELECT id, family_id, title, message, category, reveal_at, created_at
+                FROM family_memories
+                WHERE family_id = $1
+                ORDER BY created_at DESC, id DESC
+            `, [familyId])
+        ]);
+        const memoryIds = memoriesResult.rows.map(memory => memory.id);
+        const attachmentsResult = memoryIds.length
+            ? await pgPool.query(`
+                SELECT id, family_id, memory_id, object_key, original_name,
+                       mime_type, media_type, size_bytes, created_at
+                FROM family_attachments
+                WHERE family_id = $1 AND memory_id = ANY($2::bigint[])
+                ORDER BY created_at, id
+            `, [familyId, memoryIds])
+            : { rows: [] };
+
+        const attachments = await Promise.all(attachmentsResult.rows.map(async attachment => {
+            if (!supabaseConfigured) {
+                throw new Error("Family media storage is not configured.");
+            }
+            const { data, error } = await supabaseStorage.createSignedUrl(
+                attachment.object_key,
+                60,
+                { download: false }
+            );
+            if (error || !data?.signedUrl) {
+                throw error || new Error("Could not create a signed family media URL.");
+            }
+            const { object_key, ...metadata } = attachment;
+            return { ...metadata, signed_url: data.signedUrl };
+        }));
+
+        const attachmentsByMemory = new Map();
+        attachments.forEach(attachment => {
+            const items = attachmentsByMemory.get(String(attachment.memory_id)) || [];
+            items.push(attachment);
+            attachmentsByMemory.set(String(attachment.memory_id), items);
+        });
+
+        res.json({
+            family,
+            members: membersResult.rows,
+            memories: memoriesResult.rows.map(memory => ({
+                ...memory,
+                media: attachmentsByMemory.get(String(memory.id)) || []
+            }))
+        });
+    } catch (error) {
+        console.error("Admin family inspection error:", error);
+        res.status(500).json({ error: "Could not load this family or create its private media links." });
+    }
+});
+
+app.get("/api/admin/family-attachments/:id/access", requireAdmin, requireMediaStorage, async (req, res) => {
+    try {
+        const attachmentId = Number(req.params.id);
+        if (!Number.isSafeInteger(attachmentId) || attachmentId <= 0) {
+            return res.status(400).json({ error: "Invalid attachment ID." });
+        }
+        const result = await pgPool.query(`
+            SELECT a.object_key, a.mime_type, a.original_name, a.media_type, a.size_bytes
+            FROM family_attachments a
+            JOIN family_memories fm
+              ON fm.id = a.memory_id AND fm.family_id = a.family_id
+            WHERE a.id = $1
+        `, [attachmentId]);
+        const attachment = result.rows[0];
+        if (!attachment) return res.status(404).json({ error: "Family attachment not found." });
+        const { data, error } = await supabaseStorage.createSignedUrl(
+            attachment.object_key,
+            60,
+            { download: false }
+        );
+        if (error || !data?.signedUrl) throw error || new Error("Could not create signed URL.");
+        res.json({
+            url: data.signedUrl,
+            mimeType: attachment.mime_type,
+            name: attachment.original_name,
+            type: attachment.media_type,
+            size: Number(attachment.size_bytes)
+        });
+    } catch (error) {
+        console.error("Admin family media access error:", error);
+        res.status(500).json({ error: "Could not create a private media link." });
+    }
+});
+
+async function removeFamilyStorageObjects(objectKeys) {
+    if (!objectKeys.length) return;
+    if (!supabaseConfigured) {
+        throw new Error("Family media storage is not configured; no database records were deleted.");
+    }
+    for (let index = 0; index < objectKeys.length; index += 100) {
+        const { error } = await supabaseStorage.remove(objectKeys.slice(index, index + 100));
+        if (error) throw new Error(`Could not remove family media from private storage: ${error.message}`);
+    }
+}
+
+app.delete("/api/admin/families/:familyId/members/:memberId", requireAdmin, async (req, res) => {
+    const familyId = Number(req.params.familyId);
+    const memberId = Number(req.params.memberId);
+    if (!Number.isSafeInteger(familyId) || familyId <= 0 ||
+        !Number.isSafeInteger(memberId) || memberId <= 0) {
+        return res.status(400).json({ error: "Invalid family or member ID." });
+    }
+
+    const client = await pgPool.connect();
+    try {
+        await client.query("BEGIN");
+        const family = await client.query("SELECT id FROM family_accounts WHERE id = $1 FOR UPDATE", [familyId]);
+        if (!family.rowCount) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ error: "Family account not found." });
+        }
+        const member = await client.query(
+            "SELECT id FROM family_members WHERE id = $1 AND family_id = $2 FOR UPDATE",
+            [memberId, familyId]
+        );
+        if (!member.rowCount) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ error: "Family member not found." });
+        }
+        await client.query(
+            "DELETE FROM family_username_registry WHERE account_type = 'member' AND account_id = $1 AND family_id = $2",
+            [memberId, familyId]
+        );
+        await client.query("DELETE FROM family_members WHERE id = $1 AND family_id = $2", [memberId, familyId]);
+        await client.query("COMMIT");
+        res.json({ success: true });
+    } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("Admin family member deletion error:", error);
+        res.status(500).json({ error: "Could not delete the family member." });
+    } finally {
+        client.release();
+    }
+});
+
+app.delete("/api/admin/families/:familyId/memories/:memoryId", requireAdmin, async (req, res) => {
+    const familyId = Number(req.params.familyId);
+    const memoryId = Number(req.params.memoryId);
+    if (!Number.isSafeInteger(familyId) || familyId <= 0 ||
+        !Number.isSafeInteger(memoryId) || memoryId <= 0) {
+        return res.status(400).json({ error: "Invalid family or memory ID." });
+    }
+
+    const client = await pgPool.connect();
+    try {
+        await client.query("BEGIN");
+        const memory = await client.query(
+            "SELECT id FROM family_memories WHERE id = $1 AND family_id = $2 FOR UPDATE",
+            [memoryId, familyId]
+        );
+        if (!memory.rowCount) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ error: "Family memory not found." });
+        }
+        const attachments = await client.query(
+            "SELECT object_key FROM family_attachments WHERE family_id = $1 AND memory_id = $2 FOR UPDATE",
+            [familyId, memoryId]
+        );
+        await removeFamilyStorageObjects(attachments.rows.map(row => row.object_key));
+        await client.query(
+            "DELETE FROM family_attachments WHERE family_id = $1 AND memory_id = $2",
+            [familyId, memoryId]
+        );
+        await client.query("DELETE FROM family_memories WHERE id = $1 AND family_id = $2", [memoryId, familyId]);
+        await client.query("COMMIT");
+        res.json({ success: true });
+    } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("Admin family memory deletion error:", error);
+        res.status(500).json({ error: error.message || "Could not delete the family memory." });
+    } finally {
+        client.release();
+    }
+});
+
+app.delete("/api/admin/families/:familyId", requireAdmin, async (req, res) => {
+    const familyId = Number(req.params.familyId);
+    if (!Number.isSafeInteger(familyId) || familyId <= 0) {
+        return res.status(400).json({ error: "Invalid family ID." });
+    }
+
+    const client = await pgPool.connect();
+    try {
+        await client.query("BEGIN");
+        const family = await client.query(
+            "SELECT id FROM family_accounts WHERE id = $1 FOR UPDATE",
+            [familyId]
+        );
+        if (!family.rowCount) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ error: "Family account not found." });
+        }
+        const attachments = await client.query(
+            "SELECT object_key FROM family_attachments WHERE family_id = $1 FOR UPDATE",
+            [familyId]
+        );
+        await removeFamilyStorageObjects(attachments.rows.map(row => row.object_key));
+        await client.query("DELETE FROM family_username_registry WHERE family_id = $1", [familyId]);
+        await client.query("DELETE FROM family_accounts WHERE id = $1", [familyId]);
+        await client.query("COMMIT");
+        res.json({ success: true });
+    } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("Admin family account deletion error:", error);
+        res.status(500).json({ error: error.message || "Could not delete the family account." });
+    } finally {
+        client.release();
     }
 });
 
@@ -1247,6 +1576,345 @@ app.delete(
 
 
 
+
+// ============================================
+// FAMILY ACCOUNTS (separate from personal auth)
+// ============================================
+
+async function requireFamilyLogin(req, res, next) {
+    if (!req.session.familyAccountId) {
+        return res.status(401).json({ error: "Please log in to your family account." });
+    }
+    try {
+        const family = await pgPool.query("SELECT id FROM family_accounts WHERE id = $1 AND email_verified = TRUE", [req.session.familyAccountId]);
+        if (!family.rowCount) return res.status(401).json({ error: "Family account is unavailable. Please log in again." });
+        if (req.session.familyRole === "member") {
+            const member = await pgPool.query("SELECT id FROM family_members WHERE id = $1 AND family_id = $2 AND status = 'active'", [req.session.familyMemberId, req.session.familyAccountId]);
+            if (!member.rowCount) {
+                delete req.session.familyAccountId;
+                delete req.session.familyRole;
+                delete req.session.familyMemberId;
+                return res.status(403).json({ error: "Your family membership is disabled." });
+            }
+        }
+        next();
+    } catch (error) {
+        console.error("Family session check error:", error);
+        return res.status(500).json({ error: "Could not verify family access." });
+    }
+}
+
+async function requireFamilyOwner(req, res, next) {
+    if (!req.session.familyAccountId || req.session.familyRole !== "owner") {
+        return res.status(403).json({ error: "Family owner access required." });
+    }
+    next();
+}
+
+const familyVerificationRequests = new Map();
+const FAMILY_VERIFICATION_WINDOW_MS = 15 * 60 * 1000;
+const FAMILY_VERIFICATION_MAX_REQUESTS = 3;
+
+function allowFamilyVerificationRequest(keys) {
+    const now = Date.now();
+    for (const [key, entry] of familyVerificationRequests) {
+        if (entry.resetAt <= now) familyVerificationRequests.delete(key);
+    }
+    let allowed = true;
+    for (const key of keys) {
+        const entry = familyVerificationRequests.get(key);
+        if (entry && entry.count >= FAMILY_VERIFICATION_MAX_REQUESTS) {
+            allowed = false;
+        }
+    }
+    for (const key of keys) {
+        const entry = familyVerificationRequests.get(key);
+        if (!entry || entry.resetAt <= now) {
+            familyVerificationRequests.set(key, {
+                count: 1,
+                resetAt: now + FAMILY_VERIFICATION_WINDOW_MS
+            });
+        } else {
+            entry.count += 1;
+        }
+    }
+    while (familyVerificationRequests.size > 10000) {
+        familyVerificationRequests.delete(familyVerificationRequests.keys().next().value);
+    }
+    return allowed;
+}
+
+app.post("/api/family/resend-verification", async (req, res) => {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const emailKey = crypto.createHash("sha256").update(email).digest("hex");
+    const ipKey = String(req.ip || req.socket.remoteAddress || "unknown");
+    const allowed = allowFamilyVerificationRequest([`ip:${ipKey}`, `email:${emailKey}`]);
+    const response = {
+        success: true,
+        message: "If an unverified family account exists for that email, a verification link will be sent."
+    };
+
+    if (!allowed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(202).json(response);
+    }
+
+    try {
+        const result = await pgPool.query(`
+            SELECT id, family_name, owner_email
+            FROM family_accounts
+            WHERE owner_email = $1 AND email_verified = FALSE
+        `, [email]);
+        const family = result.rows[0];
+        if (family) {
+            const token = crypto.randomBytes(32).toString("hex");
+            await pgPool.query(
+                "UPDATE family_accounts SET verification_token = $1 WHERE id = $2",
+                [token, family.id]
+            );
+            const link = `${APP_URL}/api/family/verify-email?token=${token}`;
+            await sendAppEmail({
+                to: family.owner_email,
+                subject: "Verify your MemoryVault Family account",
+                html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;line-height:1.6"><h2>Verify your MemoryVault Family account</h2><p>Confirm the email for ${escapeHtml(family.family_name)}.</p><p><a href="${link}" style="display:inline-block;padding:12px 20px;background:#222;color:#fff;text-decoration:none;border-radius:6px">Verify family email</a></p><p>If you did not request this, you can ignore this email.</p></div>`
+            });
+        }
+    } catch (error) {
+        console.error("Family verification resend error:", error);
+    }
+
+    return res.status(202).json(response);
+});
+
+app.post("/api/family/register", async (req, res) => {
+    const client = await pgPool.connect();
+    try {
+        const familyName = String(req.body?.familyName || "").trim();
+        const ownerName = String(req.body?.ownerName || "").trim();
+        const username = String(req.body?.username || "").trim();
+        const email = String(req.body?.email || "").trim().toLowerCase();
+        const password = String(req.body?.password || "");
+        if (!familyName || !ownerName || !username || !email || !password) {
+            return res.status(400).json({ error: "Complete all fields to create your family account." });
+        }
+        if (familyName.length > 100 || ownerName.length > 80 || username.length < 3 || username.length > 30 || !/^[a-zA-Z0-9_.-]+$/.test(username)) {
+            return res.status(400).json({ error: "Check the family name, owner name and username. Usernames must be 3–30 characters and use letters, numbers, dots, underscores or hyphens." });
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8) {
+            return res.status(400).json({ error: "Enter a valid email and a password with at least 8 characters." });
+        }
+        const usernameCollision = await pgPool.query(`SELECT 1 FROM family_accounts WHERE LOWER(owner_username) = LOWER($1) UNION ALL SELECT 1 FROM family_members WHERE LOWER(username) = LOWER($1) LIMIT 1`, [username]);
+        if (usernameCollision.rowCount) return res.status(409).json({ error: "That username is already in use. Choose another." });
+        const hash = await bcrypt.hash(password, 12);
+        const token = crypto.randomBytes(32).toString("hex");
+        await client.query("BEGIN");
+        const created = await client.query(`
+            INSERT INTO family_accounts
+                (family_name, owner_name, owner_username, owner_email, owner_password_hash, verification_token)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id
+        `, [familyName, ownerName, username, email, hash, token]);
+        await client.query("COMMIT");
+        const link = `${APP_URL}/api/family/verify-email?token=${token}`;
+        await sendAppEmail({
+            to: email,
+            subject: "Verify your MemoryVault Family account",
+            html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;line-height:1.6"><h2>Welcome to MemoryVault Family</h2><p>Verify the family owner's email to activate your family account.</p><p><a href="${link}" style="display:inline-block;padding:12px 20px;background:#222;color:#fff;text-decoration:none;border-radius:6px">Verify family email</a></p><p>If you don't see this email, check Spam or Junk.</p></div>`
+        });
+        return res.status(201).json({ success: true, message: "Family account created. Check your email (including Spam or Junk) to verify it before logging in." });
+    } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("Family registration error:", error);
+        if (error.code === "23505") return res.status(409).json({ error: "That family owner email or username is already registered." });
+        return res.status(500).json({ error: "Could not create the family account." });
+    } finally { client.release(); }
+});
+
+app.get("/api/family/verify-email", async (req, res) => {
+    try {
+        const token = String(req.query.token || "").trim();
+        if (!token) return res.status(400).send("Invalid family verification link.");
+        const result = await pgPool.query(`UPDATE family_accounts SET email_verified = TRUE, verification_token = NULL WHERE verification_token = $1 RETURNING id`, [token]);
+        if (!result.rowCount) return res.status(400).send("This family verification link is invalid or already used.");
+        return res.send(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Family verified</title></head><body style="font-family:Arial,sans-serif;text-align:center;padding:60px 20px"><h1>Family email verified!</h1><p>Your MemoryVault Family account is ready. You can now log in.</p><a href="${APP_URL}/family.html">Open FamilyVault</a></body></html>`);
+    } catch (error) {
+        console.error("Family verification error:", error);
+        return res.status(500).send("Could not verify the family account.");
+    }
+});
+
+app.post("/api/family/login", async (req, res) => {
+    try {
+        const username = String(req.body?.username || "").trim();
+        const password = String(req.body?.password || "");
+        if (!username || !password) return res.status(400).json({ error: "Username and password are required." });
+        const ownerResult = await pgPool.query(`SELECT id, family_name, owner_name AS name, owner_username AS username, owner_password_hash AS password_hash, email_verified, 'owner' AS member_role FROM family_accounts WHERE LOWER(owner_username) = LOWER($1)`, [username]);
+        let account = ownerResult.rows[0];
+        if (account) {
+            if (!account.email_verified) return res.status(403).json({ error: "Please verify the family owner's email before logging in." });
+            if (!await bcrypt.compare(password, account.password_hash)) return res.status(401).json({ error: "Invalid username or password." });
+            req.session.familyAccountId = account.id;
+            req.session.familyRole = "owner";
+            req.session.familyMemberId = null;
+            return res.json({ success: true, family: { id: account.id, name: account.family_name }, user: { name: account.name, username: account.username, role: "owner" } });
+        }
+        const memberResult = await pgPool.query(`SELECT fm.id, fm.family_id, fm.name, fm.username, fm.password_hash, fm.status, fa.family_name FROM family_members fm JOIN family_accounts fa ON fa.id = fm.family_id WHERE LOWER(fm.username) = LOWER($1)`, [username]);
+        account = memberResult.rows[0];
+        if (!account || account.status !== "active" || !await bcrypt.compare(password, account.password_hash)) {
+            return res.status(401).json({ error: "Invalid username or password." });
+        }
+        const verified = await pgPool.query("SELECT email_verified FROM family_accounts WHERE id = $1", [account.family_id]);
+        if (!verified.rows[0]?.email_verified) return res.status(403).json({ error: "This family account is not verified yet." });
+        req.session.familyAccountId = account.family_id;
+        req.session.familyRole = "member";
+        req.session.familyMemberId = account.id;
+        return res.json({ success: true, family: { id: account.family_id, name: account.family_name }, user: { name: account.name, username: account.username, role: "member" } });
+    } catch (error) {
+        console.error("Family login error:", error);
+        return res.status(500).json({ error: "Could not log in to the family account." });
+    }
+});
+
+app.get("/api/family/me", requireFamilyLogin, async (req, res) => {
+    try {
+        const family = await pgPool.query("SELECT id, family_name, owner_name, owner_username FROM family_accounts WHERE id = $1 AND email_verified = TRUE", [req.session.familyAccountId]);
+        if (!family.rowCount) return res.status(404).json({ error: "Family account not found." });
+        let user;
+        if (req.session.familyRole === "owner") {
+            user = { name: family.rows[0].owner_name, username: family.rows[0].owner_username, role: "owner" };
+        } else {
+            const member = await pgPool.query("SELECT name, username FROM family_members WHERE id = $1 AND family_id = $2 AND status = 'active'", [req.session.familyMemberId, req.session.familyAccountId]);
+            if (!member.rowCount) return res.status(403).json({ error: "Family membership is inactive." });
+            user = { ...member.rows[0], role: "member" };
+        }
+        const members = await pgPool.query("SELECT id, name, username, status, created_at FROM family_members WHERE family_id = $1 ORDER BY id", [req.session.familyAccountId]);
+        res.json({ family: family.rows[0], user, members: members.rows });
+    } catch (error) {
+        console.error("Family profile error:", error);
+        res.status(500).json({ error: "Could not load family account." });
+    }
+});
+
+app.post("/api/family/members", requireFamilyLogin, requireFamilyOwner, async (req, res) => {
+    const members = Array.isArray(req.body?.members) ? req.body.members : [];
+    if (members.length !== 2) return res.status(400).json({ error: "Create exactly two family member accounts." });
+    const cleaned = members.map(m => ({ name: String(m?.name || "").trim(), username: String(m?.username || "").trim(), password: String(m?.password || "") }));
+    if (cleaned.some(m => !m.name || m.name.length > 80 || m.username.length < 3 || m.username.length > 30 || !/^[a-zA-Z0-9_.-]+$/.test(m.username) || m.password.length < 8)) {
+        return res.status(400).json({ error: "Each member needs a name, a valid 3–30 character username and a password of at least 8 characters." });
+    }
+    if (cleaned[0].username.toLowerCase() === cleaned[1].username.toLowerCase()) return res.status(400).json({ error: "The two member usernames must be different." });
+    if (cleaned.some(m => m.username.toLowerCase() === String(req.body.ownerUsername || "").toLowerCase())) return res.status(400).json({ error: "Member usernames must be different from the owner username." });
+    const client = await pgPool.connect();
+    try {
+        await client.query("BEGIN");
+        const familyLock = await client.query("SELECT owner_username FROM family_accounts WHERE id = $1 FOR UPDATE", [req.session.familyAccountId]);
+        if (!familyLock.rowCount) { await client.query("ROLLBACK"); return res.status(404).json({ error: "Family account not found." }); }
+        if (cleaned.some(m => m.username.toLowerCase() === familyLock.rows[0].owner_username.toLowerCase())) { await client.query("ROLLBACK"); return res.status(400).json({ error: "Member usernames must be different from the owner username." }); }
+        const collision = await client.query(`SELECT 1 FROM family_accounts WHERE LOWER(owner_username) = ANY($1::text[]) UNION ALL SELECT 1 FROM family_members WHERE LOWER(username) = ANY($1::text[]) LIMIT 1`, [cleaned.map(m => m.username.toLowerCase())]);
+        if (collision.rowCount) { await client.query("ROLLBACK"); return res.status(409).json({ error: "A username is already in use. Choose different usernames." }); }
+        const count = await client.query("SELECT COUNT(*)::int AS count FROM family_members WHERE family_id = $1", [req.session.familyAccountId]);
+        if (count.rows[0].count !== 0) { await client.query("ROLLBACK"); return res.status(409).json({ error: "Family member accounts have already been created. Contact support to change them." }); }
+        for (const member of cleaned) {
+            const hash = await bcrypt.hash(member.password, 12);
+            await client.query("INSERT INTO family_members (family_id, name, username, password_hash) VALUES ($1, $2, $3, $4)", [req.session.familyAccountId, member.name, member.username, hash]);
+        }
+        await client.query("COMMIT");
+        res.status(201).json({ success: true, message: "Both family member accounts have been created." });
+    } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("Family member creation error:", error);
+        if (error.code === "23505") return res.status(409).json({ error: "A username is already in use. Choose different usernames." });
+        res.status(500).json({ error: "Could not create family member accounts." });
+    } finally { client.release(); }
+});
+
+app.patch("/api/family/members/:id/status", requireFamilyLogin, requireFamilyOwner, async (req, res) => {
+    const id = Number(req.params.id);
+    const status = req.body?.status;
+    if (!Number.isSafeInteger(id) || id <= 0 || !["active", "disabled"].includes(status)) return res.status(400).json({ error: "Invalid member or status." });
+    try {
+        const result = await pgPool.query("UPDATE family_members SET status = $1 WHERE id = $2 AND family_id = $3 RETURNING id", [status, id, req.session.familyAccountId]);
+        if (!result.rowCount) return res.status(404).json({ error: "Family member not found." });
+        res.json({ success: true });
+    } catch (error) { console.error("Family member update error:", error); res.status(500).json({ error: "Could not update member." }); }
+});
+
+app.post("/api/family/memories", requireFamilyLogin, async (req, res) => {
+    try {
+        const title = String(req.body?.title || "").trim();
+        const message = String(req.body?.message || "").trim();
+        const revealAt = new Date(req.body?.revealAt);
+        const category = String(req.body?.category || "Family").trim() || "Family";
+        if (!title || !message || Number.isNaN(revealAt.getTime()) || revealAt <= new Date()) return res.status(400).json({ error: "Enter a title, message and a future reveal date." });
+        const result = await pgPool.query("INSERT INTO family_memories (family_id, created_by_member_id, title, message, reveal_at, category) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id", [req.session.familyAccountId, req.session.familyMemberId, title, message, revealAt.toISOString(), category]);
+        res.status(201).json({ success: true, memoryId: result.rows[0].id });
+    } catch (error) { console.error("Family memory creation error:", error); res.status(500).json({ error: "Could not create family memory." }); }
+});
+
+app.get("/api/family/memories", requireFamilyLogin, async (req, res) => {
+    try {
+        const result = await pgPool.query(`SELECT fm.id, fm.title, fm.message, fm.reveal_at, fm.created_at, fm.category, COALESCE((SELECT json_agg(json_build_object('id', a.id, 'original_name', a.original_name, 'mime_type', a.mime_type, 'media_type', a.media_type, 'size_bytes', a.size_bytes) ORDER BY a.created_at) FROM family_attachments a WHERE a.memory_id = fm.id AND a.family_id = fm.family_id), '[]'::json) AS media FROM family_memories fm WHERE fm.family_id = $1 ORDER BY fm.reveal_at ASC`, [req.session.familyAccountId]);
+        const now = new Date();
+        res.json({ memories: result.rows.map(m => ({ ...m, revealed: new Date(m.reveal_at) <= now, message: new Date(m.reveal_at) <= now ? m.message : null })) });
+    } catch (error) { console.error("Family memory retrieval error:", error); res.status(500).json({ error: "Could not load family memories." }); }
+});
+
+
+app.post("/api/family/memories/:id/media", requireFamilyLogin, requireMediaStorage,
+    (req, res, next) => mediaUpload.array("media", MEDIA_MAX_FILES_PER_MEMORY)(req, res, error => {
+        if (error) return res.status(400).json({ error: error.message || "Invalid media upload." });
+        next();
+    }), async (req, res) => {
+        const memoryId = Number(req.params.id);
+        if (!Number.isSafeInteger(memoryId) || memoryId <= 0) return res.status(400).json({ error: "Invalid memory ID." });
+        const files = req.files || [];
+        if (!files.length) return res.status(400).json({ error: "Choose at least one file." });
+        const memory = await pgPool.query("SELECT id FROM family_memories WHERE id = $1 AND family_id = $2", [memoryId, req.session.familyAccountId]);
+        if (!memory.rowCount) return res.status(404).json({ error: "Family memory not found." });
+        const client = await pgPool.connect();
+        const uploaded = [];
+        try {
+            await client.query("BEGIN");
+            for (const file of files) {
+                const kind = mediaKind(file.mimetype);
+                if (!kind) throw new Error("Unsupported media type.");
+                const key = `families/${req.session.familyAccountId}/memories/${memoryId}/${crypto.randomUUID()}-${safeMediaName(file.originalname)}`;
+                const { error: storageError } = await supabaseStorage.upload(key, file.buffer, { contentType: file.mimetype, upsert: false, cacheControl: "60" });
+                if (storageError) throw storageError;
+                uploaded.push(key);
+                await client.query(`INSERT INTO family_attachments (family_id, memory_id, uploaded_by_member_id, object_key, original_name, mime_type, media_type, size_bytes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [req.session.familyAccountId, memoryId, req.session.familyMemberId, key, safeMediaName(file.originalname), file.mimetype, kind, file.size]);
+            }
+            await client.query("COMMIT");
+            res.status(201).json({ success: true, uploaded: files.length });
+        } catch (error) {
+            await client.query("ROLLBACK").catch(() => {});
+            if (uploaded.length) await supabaseStorage.remove(uploaded).catch(() => {});
+            console.error("Family media upload error:", error);
+            res.status(500).json({ error: "Could not save family media." });
+        } finally { client.release(); }
+    }
+);
+
+app.get("/api/family/media/:id/access", requireFamilyLogin, requireMediaStorage, async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: "Invalid media ID." });
+        const result = await pgPool.query(`SELECT a.object_key, a.mime_type, a.original_name FROM family_attachments a JOIN family_memories m ON m.id = a.memory_id AND m.family_id = a.family_id WHERE a.id = $1 AND a.family_id = $2 AND m.reveal_at <= NOW()`, [id, req.session.familyAccountId]);
+        const attachment = result.rows[0];
+        if (!attachment) return res.status(404).json({ error: "Media not found or memory is still locked." });
+        const { data, error } = await supabaseStorage.createSignedUrl(attachment.object_key, 60, { download: false });
+        if (error || !data?.signedUrl) throw error || new Error("Could not create signed URL.");
+        res.json({ url: data.signedUrl, mimeType: attachment.mime_type, name: attachment.original_name });
+    } catch (error) { console.error("Family media access error:", error); res.status(500).json({ error: "Could not open family media." }); }
+});
+
+app.post("/api/family/logout", (req, res) => {
+    delete req.session.familyAccountId;
+    delete req.session.familyRole;
+    delete req.session.familyMemberId;
+    res.json({ success: true });
+});
+
+
 // ============================================
 // HOME PAGE
 // ============================================
@@ -1279,17 +1947,17 @@ app.post("/api/test-email", async (req, res) => {
         const result = await sendAppEmail({
             to: recipient,
             subject: "MemoryVault email test",
-            html: "<h2>MemoryVault email test</h2><p>Your Mailjet connection is working!</p>"
+            html: "<h2>MemoryVault email test</h2><p>Your Resend connection is working!</p>"
         });
 
         res.json({
             success: true,
-            message: "Email accepted by Mailjet.",
+            message: "Email accepted by Resend.",
             id: result.messageId
         });
 
     } catch (error) {
-        console.error("Mailjet test failed:", error);
+        console.error("Resend test failed:", error);
 
         res.status(500).json({
             error: error.message || "Could not send test email."
