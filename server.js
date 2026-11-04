@@ -546,7 +546,7 @@ app.post("/api/register", async (req, res) => {
 
         res.status(201).json({
             success: true,
-            message: "Account created. Please check your email and click the verification link before logging in."
+            message: "Account created successfully! We've sent a verification link to your email. Please check your inbox, and also check your Spam or Junk folder if you don't see it."
         });
 
     } catch (error) {
